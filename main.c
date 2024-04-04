@@ -4,10 +4,17 @@
 #include"GL/glut.h"
 
 #define PI 3.14159265359f
+#define ANIMATION_DELAY 40
 #define CAMERA_ROTATION_SPEED 1.5f
 #define CAMERA_SPEED 0.25f
 #define CAMERA_MODEL 0
 #define CAMERA_FREE 1
+#define BALL_SPEED 0.07f
+#define CELESTIAL_SELF_SPIN 1.8f
+#define CELESTIAL_SPIN 1.2f
+
+#define LIGHT_HEAD GL_LIGHT0
+#define LIGHT_BALL GL_LIGHT1
 
 typedef struct {
 	GLfloat x;
@@ -20,10 +27,11 @@ void drawingCB(void);
 void reshapeCB(int width, int height);
 void keyboardCB(unsigned char key, int x, int y);
 void keyboardSpecialCB(int key, int x, int y);
-void TimerCB(int value);
-GLubyte *readBMP(char *imagepath, int *width, int *height, int flip);
+void animateBouncingBall(int value);
+void animateSolarSystem(int value);
+GLubyte *readBMP(char *imagepath, int *width, int *height);
 void TerminationErrorFunc(char *ErrorString);
-GLuint load_texture(char *name, int flip);
+GLuint load_texture(char *name);
 
 int FOVy = 60;
 int camera_mode = CAMERA_MODEL;
@@ -34,7 +42,12 @@ vec3 cameraForward = { 0, 0, -1 };
 vec3 cameraForwardXZ = { 0, 0, -1 };
 vec3 cameraRight = { 1, 0, 0 };
 
-GLuint ground;
+float ballPosition = 0;
+float dxBall = BALL_SPEED;
+
+float earthAngle = 0, earthSelf = 0, sunSelf = 0, moonSelf = 0, moonAngle = 0;
+
+GLuint ground, ball, wall, sun, moon, earth;
 
 int main(int argc, char **argv)
 {
@@ -47,18 +60,26 @@ int main(int argc, char **argv)
 	glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | GLUT_DOUBLE);
 	glutCreateWindow("Graphics project - Children's park");
 
-	//enable depth testing
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
 	glEnable(GL_TEXTURE_2D);
+
+	glEnable(LIGHT_BALL);
 
 	//registering callbacks
 	glutDisplayFunc(drawingCB);
 	glutReshapeFunc(reshapeCB);
 	glutKeyboardFunc(keyboardCB);
 	glutSpecialFunc(keyboardSpecialCB);
+	glutTimerFunc(ANIMATION_DELAY, animateBouncingBall, 0);
+	glutTimerFunc(ANIMATION_DELAY, animateSolarSystem, 0);
 
-	ground = load_texture("ground.bmp", 1);
+	ground = load_texture("ground.bmp");
+	ball = load_texture("tex3.bmp");
+	wall = load_texture("wall.bmp");
+	sun = load_texture("sun.bmp");
+	moon = load_texture("moon.bmp");
+	earth = load_texture("earth.bmp");
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
@@ -68,10 +89,10 @@ int main(int argc, char **argv)
 	glutMainLoop();
 }
 
-GLuint load_texture(char *name, int flip)
+GLuint load_texture(char *name)
 {
 	int width, height;
-	GLubyte *data = readBMP(name, &width, &height, flip);
+	GLubyte *data = readBMP(name, &width, &height);
 	GLuint id;
 
 	glGenTextures(1, &id);
@@ -137,6 +158,129 @@ void drawGround(void)
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
+void drawBouncingBall(void)
+{
+	GLfloat ballLight[] = { ballPosition, 0, 0, 1 };
+	GLfloat ballColor[] = { 2, 0.7, 0.7, 1 };
+	GLfloat ballAmbient[] = { 0.4, 0.4, 0.4, 1 };
+	float scale = 1;
+	float translatePos = ballPosition > 0 ? -0.4 : 0.4;
+	GLUquadric *sphere = gluNewQuadric();
+	gluQuadricTexture(sphere, GL_TRUE);
+
+	glBindTexture(GL_TEXTURE_2D, wall);
+	glBegin(GL_QUADS);
+	//glNormal3f(ballPosition + 1, -1, -1);
+	glNormal3f(1, 0, 0);
+	glTexCoord2f(0, 1);
+	glVertex3f(-1, 1, 1);
+	//glNormal3f(ballPosition + 1, 1, -1);
+	glTexCoord2f(0, 0);
+	glVertex3f(-1, -1, 1);
+	//glNormal3f(ballPosition + 1, 1, 1);
+	glTexCoord2f(1, 0);
+	glVertex3f(-1, -1, -1);
+	//glNormal3f(ballPosition + 1, -1, 1);
+	glTexCoord2f(1, 1);
+	glVertex3f(-1, 1, -1);
+	//glNormal3f(ballPosition - 1, -1, -1);
+	glNormal3f(-1, 0, 0);
+	glTexCoord2f(1, 1);
+	glVertex3f(1, 1, 1);
+	//glNormal3f(ballPosition - 1, 1, -1);
+	glTexCoord2f(1, 0);
+	glVertex3f(1, -1, 1);
+	//glNormal3f(ballPosition - 1, 1, 1);
+	glTexCoord2f(0, 0);
+	glVertex3f(1, -1, -1);
+	//glNormal3f(ballPosition - 1, -1, 1);
+	glTexCoord2f(0, 1);
+	glVertex3f(1, 1, -1);
+	glEnd();
+
+	if (ballPosition < -0.6)
+		scale = 1 - ((ballPosition + 0.6) / (-1 + 0.6));
+	else if (ballPosition > 0.6)
+		scale = 1 - ((ballPosition - 0.6) / (1 - 0.6));
+
+	glBindTexture(GL_TEXTURE_2D, ball);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+
+	glPushMatrix();
+	glTranslatef(ballPosition, 0, 0);
+	glTranslatef(-translatePos * scale, 0, 0);
+	glScalef(scale, 2 - scale, 2 - scale);
+	glTranslatef(translatePos, 0, 0);
+
+	glLightfv(LIGHT_BALL, GL_POSITION, ballLight);
+	glLightfv(LIGHT_BALL, GL_DIFFUSE, ballColor);
+	glLightfv(LIGHT_BALL, GL_AMBIENT, ballAmbient);
+	glLightf(LIGHT_BALL, GL_QUADRATIC_ATTENUATION, 0.2);
+
+	gluSphere(sphere, 0.4, 30, 30);
+	gluDeleteQuadric(sphere);
+	glPopMatrix();
+
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void drawSolarSystem(void)
+{
+	GLUquadric *sphere = gluNewQuadric();
+	GLUquadric *disk = gluNewQuadric();
+	gluQuadricTexture(sphere, GL_TRUE);
+	glColor3f(0.4, 0.4, 0.4);
+
+	glBindTexture(GL_TEXTURE_2D, sun);
+
+	glPushMatrix();
+	glRotatef(sunSelf, 0, 1, 0);
+	gluSphere(sphere, 1, 30, 30);
+	glPopMatrix();
+
+	glPushMatrix();
+	glRotatef(earthAngle, 0, 1, 0);
+	glTranslatef(3, 0, 0);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glPushMatrix();
+	glRotatef(90, 1, 0, 0);
+	glDisable(GL_LIGHTING);
+	gluDisk(disk, 0.95, 1, 30, 30);
+	if (lighting)
+		glEnable(GL_LIGHTING);
+	glPopMatrix();
+
+	glBindTexture(GL_TEXTURE_2D, earth);
+	glPushMatrix();
+	glRotatef(earthSelf, -1, 1, 0);
+	gluSphere(sphere, 0.4, 100, 100);
+
+	glPopMatrix();
+
+	glBindTexture(GL_TEXTURE_2D, moon);
+
+	glRotatef(moonAngle, 0, 1, 0);
+	glTranslatef(1, 0, 0);
+	glRotatef(moonSelf, 0, 1, 0);
+	gluSphere(sphere, 0.25, 30, 30);
+
+	glPopMatrix();
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glPushMatrix();
+	glRotatef(90, 1, 0, 0);
+	glDisable(GL_LIGHTING);
+	gluDisk(disk, 2.95, 3, 100, 100);
+	if (lighting)
+		glEnable(GL_LIGHTING);
+	glPopMatrix();
+
+	gluDeleteQuadric(sphere);
+	gluDeleteQuadric(disk);
+}
+
 void drawingCB(void)
 {
 	GLenum er;
@@ -154,13 +298,13 @@ void drawingCB(void)
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-	glLightfv(GL_LIGHT0, GL_POSITION, light0Pos);
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, light0Color);
-	glLightfv(GL_LIGHT0, GL_AMBIENT, light0Ambient);
+	glLightfv(LIGHT_HEAD, GL_POSITION, light0Pos);
+	glLightfv(LIGHT_HEAD, GL_DIFFUSE, light0Color);
+	glLightfv(LIGHT_HEAD, GL_AMBIENT, light0Ambient);
 
 	if (camera_mode == CAMERA_MODEL) {
-		glEnable(GL_LIGHT0);
-		glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0);
+		glEnable(LIGHT_HEAD);
+		glLightf(LIGHT_HEAD, GL_QUADRATIC_ATTENUATION, 0);
 
 		glTranslatef(0, 0, -radius);
 		glRotatef(angleX, 1, 0, 0);
@@ -169,20 +313,20 @@ void drawingCB(void)
 
 	if (camera_mode == CAMERA_FREE) {
 		if (head_light) {
-			glEnable(GL_LIGHT0);
-			glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0.007);
+			glEnable(LIGHT_HEAD);
+			glLightf(LIGHT_HEAD, GL_QUADRATIC_ATTENUATION, 0.007);
 		}
 		else {
-			glDisable(GL_LIGHT0);
+			glDisable(LIGHT_HEAD);
 		}
 		if (angleX < -45)
 			up = cameraForwardXZ;
 		gluLookAt(cameraPos.x, cameraPos.y, cameraPos.z, center.x, center.y, center.z, up.x, up.y, up.z);
 		drawGround();
 	}
-
-	glColor3f(0.8, 0.8, 0.8);
-	glutSolidTeapot(1);
+	//glTranslatef(0, 2, 0);
+	//drawSolarSystem();
+	drawBouncingBall();
 
 	//swapping buffers and displaying
 	glutSwapBuffers();
@@ -394,14 +538,37 @@ void keyboardSpecialCB(int key, int x, int y)
 	glutPostRedisplay();
 }
 
-void TimerCB(int value)
+void animateBouncingBall(int value)
 {
-	
+	ballPosition += dxBall;
+
+	if (ballPosition >= 0.9) {
+		ballPosition = 0.9;
+		dxBall = -dxBall;
+	}
+	else if (ballPosition <= -0.9) {
+		ballPosition = -0.9;
+		dxBall = -dxBall;
+	}
+
+	glutPostRedisplay();
+	glutTimerFunc(ANIMATION_DELAY, animateBouncingBall, 0);
+}
+
+void animateSolarSystem(int value)
+{
+	sunSelf = wrapAngle(sunSelf + CELESTIAL_SELF_SPIN, 360);
+	earthSelf = wrapAngle(earthSelf + CELESTIAL_SELF_SPIN, 360);
+	moonSelf = wrapAngle(moonSelf + CELESTIAL_SELF_SPIN, 360);
+	earthAngle = wrapAngle(earthAngle + CELESTIAL_SPIN, 360);
+	moonAngle = wrapAngle(moonAngle + CELESTIAL_SPIN, 360);
+	glutPostRedisplay();
+	glutTimerFunc(ANIMATION_DELAY, animateSolarSystem, 0);
 }
 
 // Function to load bmp file
 // buffer for the image is allocated in this function, you should free this buffer
-GLubyte *readBMP(char *imagepath, int *width, int *height, int flip)
+GLubyte *readBMP(char *imagepath, int *width, int *height)
 {
 	unsigned char header[54]; // Each BMP file begins by a 54-bytes header
 	unsigned int dataPos;     // Position in the file where the actual data begins
@@ -445,14 +612,12 @@ GLubyte *readBMP(char *imagepath, int *width, int *height, int flip)
 	// Read the actual data from the file into the buffer
 	fread(data, 1, imageSize, file);
 
-	if (flip) {
-		//swap the r and b values to get RGB (bitmap is BGR)
-		for (i = 0; i < *width * *height; i++)
-		{
-			tmp = data[i * 3];
-			data[i * 3] = data[i * 3 + 2];
-			data[i * 3 + 2] = tmp;
-		}
+	//swap the r and b values to get RGB (bitmap is BGR)
+	for (i = 0; i < *width * *height; i++)
+	{
+		tmp = data[i * 3];
+		data[i * 3] = data[i * 3 + 2];
+		data[i * 3 + 2] = tmp;
 	}
 
 	//Everything is in memory now, the file can be closed
