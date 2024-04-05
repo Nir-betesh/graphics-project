@@ -15,6 +15,7 @@
 
 #define LIGHT_HEAD GL_LIGHT0
 #define LIGHT_BALL GL_LIGHT1
+#define SWING_MAX_ANG 40
 
 typedef struct {
 	GLfloat x;
@@ -36,9 +37,7 @@ void VerticalCylinder(float radius, float height);
 void DrawSign(void);
 void DrawWindSpinner(void);
 void DrawSpinner(void);
-void VerticalCylinder(float radius, float height);
 void drawBlade(void);
-void DrawSpinner(void);
 void update(int value);
 void DrawStreetLight(void);
 void DrawSwings(void);
@@ -48,6 +47,12 @@ void update_flag(int value);
 void DrawFountain(void);
 void DrawDropletsOval(void);
 void update_droplets(int value);
+float DrawChains(int length);
+void DrawSwing(void);
+
+float time = 0;
+int isBanchExist = 0, dirSwingA = 1;
+float swingAng = SWING_MAX_ANG;
 
 int FOVy = 60;
 int camera_mode = CAMERA_MODEL;
@@ -385,9 +390,27 @@ void drawingCB(void)
 	DrawFence((vec3) { -boundery, 0, -boundery },  (vec3) { boundery, 0, -boundery }, 2);
 	DrawFence((vec3) { boundery, 0, -boundery }, (vec3) { boundery, 0, boundery }, 2);
 
+	/*
+	glPushMatrix();
+	glTranslated(0, 1, 0);
+
+	glPushMatrix();
+	glRotated(-90, 0, 1, 0);
+	DrawWindSpinner();
+	glPopMatrix();
+
+	glTranslated(2, 0, 0);
+	DrawStreetLight();
+	glPopMatrix();
+
+	glPushMatrix();
+	DrawSwings();
+	glPopMatrix();
+
 	//DrawFountain();
 	DrawFountain();
 	*/
+
 	//swapping buffers and displaying
 	glutSwapBuffers();
 
@@ -1039,7 +1062,7 @@ void DrawWindSpinner(void)
 	glPopMatrix();
 }
 
-void drawBlade(void) 
+void drawBlade(void)
 {
 	glPushMatrix();
 	glTranslated(0, 0, -1);
@@ -1047,7 +1070,7 @@ void drawBlade(void)
 	glPopMatrix();
 }
 
-void DrawSpinner(void) 
+void DrawSpinner(void)
 {
 	glPushMatrix();
 	glRotatef(rotationAngle, 1.0, 0.0, 0.0);
@@ -1061,7 +1084,7 @@ void DrawSpinner(void)
 	glPopMatrix();
 }
 
-void DrawStreetLight(void) 
+void DrawStreetLight(void)
 {
 	glPushMatrix();
 	glTranslatef(0, -1.7, 0);
@@ -1085,6 +1108,7 @@ void DrawStreetLight(void)
 	glTranslatef(0, 0, 1);
 	glutSolidSphere(0.1, 20, 20);
 	glTranslatef(0, -0.32, -0.1);
+
 	glPushMatrix();
 	glRotated(-90.0, 1, 0, 0);
 	glutSolidCone(0.2, 0.3, 10, 10);
@@ -1097,6 +1121,7 @@ void DrawStreetLight(void)
 	GLfloat light_1_ambient[] = { 0.3, 0.3, 0.3, 1 };
 	GLfloat light_1_spotLight[] = { 0, -1, 0, 1 };
 	GLfloat light_1_spotCutOff[] = { 25 };
+
 	glLightfv(GL_LIGHT1, GL_POSITION, light_1_position);
 	glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, light_1_spotLight);
 	glLightfv(GL_LIGHT1, GL_SPOT_CUTOFF, light_1_spotCutOff);
@@ -1105,8 +1130,8 @@ void DrawStreetLight(void)
 	glLightfv(GL_LIGHT1, GL_AMBIENT, light_1_ambient);
 
 	glBindTexture(GL_TEXTURE_2D, lamp);
-	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
 	glEnable(GL_TEXTURE_GEN_S);
 	glEnable(GL_TEXTURE_GEN_T);
 	glutSolidSphere(0.12, 20, 20);
@@ -1119,48 +1144,124 @@ void DrawStreetLight(void)
 void DrawSwings(void) 
 {
 	glPushMatrix();
-	glTranslated(0, -1, 0);
+		glTranslated(0, -1, 0);
 
-	// Right pillar
-	glPushMatrix();
-	glTranslated(2, 0, 0);
-	VerticalCylinder(0.1, 3.0);
-	glTranslated(0, 3, 0);
-	glutSolidSphere(0.1, 10, 10);
-	glPopMatrix();
+		// Right pillar
+		glPushMatrix();
+			glTranslated(2, 0, 0);
+			VerticalCylinder(0.1, 3.0);
+			glTranslated(0, 3, 0);
+			glutSolidSphere(0.1, 10, 10);
+		glPopMatrix();
 
-	// Left pillar
-	glPushMatrix();
-	glTranslated(-2, 0, 0);
-	VerticalCylinder(0.1, 3.0);
-	glTranslated(0, 3, 0);
-	glutSolidSphere(0.1, 10, 10);
-	glPopMatrix();
+		// Left pillar
+		glPushMatrix();
+			glTranslated(-2, 0, 0);
+			VerticalCylinder(0.1, 3.0);
+			glTranslated(0, 3, 0);
+			glutSolidSphere(0.1, 10, 10);
+		glPopMatrix();
 
-	// Top Pillar
-	glPushMatrix();
-	glTranslated(2, 3, 0);
-	GLUquadricObj* quadratic;
-	quadratic = gluNewQuadric();
-	gluQuadricTexture(quadratic, GL_TRUE);
-	glRotatef(-90.0f, 0.0f, 1.0f, 0.0f);
-	gluCylinder(quadratic, 0.1, 0.1, 4.0, 32, 32);	
-	glPopMatrix();
+		// Top Pillar
+		glPushMatrix();
+			glTranslated(2, 3, 0);
+			GLUquadricObj* quadratic;
+			quadratic = gluNewQuadric();
+			gluQuadricTexture(quadratic, GL_TRUE);
+			glRotatef(-90.0f, 0.0f, 1.0f, 0.0f);
+			gluCylinder(quadratic, 0.1, 0.1, 4.0, 32, 32);	
+		glPopMatrix();
 
-	glutSolidTorus(0.02, 0.06 ,10, 10);
-	glTranslated(1, 0, 0);
-	glScaled(1, 2, 1);
-	glutSolidTorus(0.02, 0.01 ,10, 10);
+		glPushMatrix();
+
+			glTranslated(0, 2.83, 0);
+				
+			// Draw Swing Left
+			glPushMatrix();
+			glTranslated(-1.5, 0, 0);
+			glRotatef(swingAng, 1, 0, 0);
+			DrawSwing();
+			glPopMatrix();
+
+			// Draw Swing Right
+			glPushMatrix();
+			glTranslated(0.5, 0, 0);
+			glRotatef(-swingAng, 1, 0, 0);
+
+			DrawSwing();
+			glPopMatrix();
+
+		glPopMatrix();
 
 	glPopMatrix();
 }
 
+float DrawChains(int length) 
+{
+	float y = -0.035;
+
+	glPushMatrix();
+		glutSolidTorus(0.02, 0.06, 10, 10);
+		glScaled(1, 2, 1);
+
+		glTranslatef(0, -0.035, 0);
+		glRotatef(90.0, 0.0, 1.0, 0.0);
+
+		glPushMatrix();
+			for (int i = 0; i < length; i++) {
+				glutSolidTorus(0.01, 0.02, 50, 50);
+				glRotatef(90.0, 0.0, 1.0, 0.0);
+				glTranslatef(0, -0.035, 0);
+				y += -0.035*2;
+			}
+		glPopMatrix();
+
+	glPopMatrix();
+
+	return y;
+}
+
+void DrawSwing(void)
+{
+	float y;
+
+	glPushMatrix();
+		// Chain Left
+		y = DrawChains(30);
+
+		// Draw Banch
+		glPushMatrix();
+		glTranslatef(0, y, 0);
+		glScalef(12.0, 1.0, 5.0);
+		glTranslatef(0.042, 0.0, -0.005);
+		glutSolidCube(0.1);
+		glPopMatrix();
+
+		// Chain Right
+		glTranslated(1, 0, 0);
+		DrawChains(30);
+	glPopMatrix();
+
+
+}
+
 void update(int value) 
 {
+	float length = 0.8;
+	double omega = sqrt(9.81 / length);
+	float time_period = 2 * PI * sqrt(length / 9.81);
+
 	rotationAngle += 2.0f; // Adjust rotation speed as needed
-	if (rotationAngle > 360) {
-		rotationAngle -= 360;
+	rotationAngle = wrapAngle(rotationAngle, 360.0);
+
+	time += 16 * 0.001f;
+	swingAng = SWING_MAX_ANG * cos(omega * time);
+
+
+	if (time >= time_period) {
+		time = 0;
 	}
+
 	glutPostRedisplay();
 	glutTimerFunc(16, update, 0); // ~60 FPS
 }
@@ -1171,8 +1272,6 @@ void plotPixel(int x, int y)
 	glVertex2i(x, y);
 	glEnd();
 }
-
-
 
 /*
 	Colors:
@@ -1221,7 +1320,6 @@ void plotPixel(int x, int y)
 		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
 	
 */
-
 
 /*
 	// Light Settings
