@@ -24,6 +24,15 @@ void TimerCB(int value);
 GLubyte *readBMP(char *imagepath, int *width, int *height, int flip);
 void TerminationErrorFunc(char *ErrorString);
 GLuint load_texture(char *name, int flip);
+void DrawWindSpinner();
+void DrawSpinner();
+void VerticalCylinder(float radius, float height);
+void drawBlade();
+void DrawSpinner();
+void update(int value);
+void DrawStreetLight();
+
+
 
 int FOVy = 60;
 int camera_mode = CAMERA_MODEL;
@@ -34,7 +43,12 @@ vec3 cameraForward = { 0, 0, -1 };
 vec3 cameraForwardXZ = { 0, 0, -1 };
 vec3 cameraRight = { 1, 0, 0 };
 
+// Global variables
+float rotationAngle = 0.0f;
+
 GLuint ground;
+GLuint metal;
+
 
 int main(int argc, char **argv)
 {
@@ -46,6 +60,9 @@ int main(int argc, char **argv)
 	glutInitWindowPosition(100, 100);
 	glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | GLUT_DOUBLE);
 	glutCreateWindow("Graphics project - Children's park");
+
+	glClearColor(1.0, 1.0, 1.0, 0.0);
+
 
 	//enable depth testing
 	glEnable(GL_DEPTH_TEST);
@@ -59,7 +76,10 @@ int main(int argc, char **argv)
 	glutSpecialFunc(keyboardSpecialCB);
 
 	ground = load_texture("ground.bmp", 1);
+	//metal = load_texture("metal.bmp", 1);
 	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glutTimerFunc(0, update, 0); // Start the update timer
 
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
@@ -181,8 +201,10 @@ void drawingCB(void)
 		drawGround();
 	}
 
-	glColor3f(0.8, 0.8, 0.8);
-	glutSolidTeapot(1);
+	glPushMatrix();
+	//DrawWindSpinner();
+	DrawStreetLight();
+	glPopMatrix();
 
 	//swapping buffers and displaying
 	glutSwapBuffers();
@@ -468,4 +490,132 @@ void TerminationErrorFunc(char *ErrorString)
 	fgets(string, 256, stdin);
 
 	exit(0);
+}
+
+
+void DrawWindSpinner()
+{
+	glPushMatrix();
+	glTranslatef(0, -1.5, 0);
+	float CylinderHeight = 3.0f;
+	float CylinderRadius = 0.1f;
+
+	glPushMatrix();
+	// Polished Silver Color
+	GLfloat mat_ambient[] = { 0.23125, 0.23125, 0.23125, 1.0 };
+	GLfloat mat_diffuse[] = { 0.2775, 0.2775, 0.2775, 1.0 };
+	GLfloat mat_specular[] = { 0.773911, 0.773911, 0.773911, 1.0 };
+	GLfloat mat_shininess[] = { 51.22 };
+
+	glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+	VerticalCylinder(0.1, 3.0);
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslated(0, 3, 0);
+	glutSolidSphere(0.1, 20, 20);
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslatef(0, 3.0f, 0);
+	/*
+		// Emerald Color
+		GLfloat mat_ambient1[] = { 0.0215, 0.1745, 0.0215, 0.55 };
+		GLfloat mat_diffuse1[] = { 0.07568, 0.61424, 0.07568, 0.55 };
+		GLfloat mat_specular1[] = { 0.633, 0.727811, 0.633, 0.55 };
+		GLfloat mat_shininess1[] = { 76.8 };
+		glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient1);
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse1);
+		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular1);
+		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess1);
+	*/
+
+	/*
+		// Gold Color
+		GLfloat mat_ambient1[] = { 0.24725, 0.2245, 0.0645, 1.0 };
+		GLfloat mat_diffuse1[] = { 0.34615, 0.3143, 0.0903, 1.0 };
+		GLfloat mat_specular1[] = { 0.628281, 0.555802, 0.366065, 1.0 };
+		GLfloat mat_shininess1[] = { 51.2 };
+		glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient1);
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse1);
+		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular1);
+		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess1);
+	*/
+	glutSolidSphere(0.1, 20, 20);
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslatef(0.2, 3.0f, 0);
+	// Ruby Color
+	GLfloat mat_ambient2[] = { 0.1745, 0.01175, 0.01175, 0.55 };
+	GLfloat mat_diffuse2[] = { 0.61424, 0.04136, 0.04136, 0.55 };
+	GLfloat mat_specular2[] = { 0.727811, 0.626959, 0.626959, 0.55 };
+	GLfloat mat_shininess2[] = { 76.8 };
+
+	glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient2);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse2);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular2);
+	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess2);
+
+	glutSolidSphere(0.1, 20, 20);
+	DrawSpinner();
+	glPopMatrix();
+
+	glPopMatrix();
+}
+
+
+void VerticalCylinder(float radius, float height) {
+	glPushMatrix();
+	GLUquadricObj* quadratic;
+	quadratic = gluNewQuadric();
+	gluQuadricTexture(quadratic, GL_TRUE);
+	glRotatef(-90.0f, 1.0f, 0.0f, 0.0f);
+	gluCylinder(quadratic, radius, radius, height, 32, 32);
+	glPopMatrix();
+}
+
+
+void drawBlade() {
+	//glScaled(1, 1, -1);
+	glPushMatrix();
+	glTranslated(0, 0, -1);
+	glutSolidCone(0.1, 1.0, 20, 20);
+	glPopMatrix();
+
+}
+
+void DrawSpinner() {
+	glPushMatrix();
+	glRotatef(rotationAngle, 1.0, 0.0, 0.0);
+
+	// Draw the wind spinner blades
+	for (int i = 0; i < 6; ++i) {
+		glRotatef(60.0, 1.0, 0.0, 0.0);
+		drawBlade();
+	}
+
+	glPopMatrix();
+}
+
+
+void DrawStreetLight() {
+	VerticalCylinder(0.1, 4.0);
+	GLUquadricObj* quadratic;
+	quadratic = gluNewQuadric();
+	glTranslated(0, 4, 0);
+	glutSolidSphere(0.1, 20, 20);
+	gluCylinder(quadratic, 0.1, 0.1, 0.5, 32, 32);
+}
+
+void update(int value) {
+	rotationAngle += 2.0f; // Adjust rotation speed as needed
+	if (rotationAngle > 360) {
+		rotationAngle -= 360;
+	}
+	glutPostRedisplay();
+	glutTimerFunc(16, update, 0); // ~60 FPS
 }
