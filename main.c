@@ -32,6 +32,9 @@ void animateSolarSystem(int value);
 GLubyte *readBMP(char *imagepath, int *width, int *height);
 void TerminationErrorFunc(char *ErrorString);
 GLuint load_texture(char *name);
+void VerticalCylinder(float radius, float height);
+void DrawSign();
+void DrawFence(float from_x, float from_z, float to_x, float to_z, float pole_r, float pole_n);
 
 int FOVy = 60;
 int camera_mode = CAMERA_MODEL;
@@ -48,6 +51,10 @@ float dxBall = BALL_SPEED;
 float earthAngle = 0, earthSelf = 0, sunSelf = 0, moonSelf = 0, moonAngle = 0;
 
 GLuint ground, ball, wall, sun, moon, earth;
+GLuint wood;
+GLuint wood2;
+GLuint wood2front;
+GLuint lamp;
 
 int main(int argc, char **argv)
 {
@@ -80,7 +87,12 @@ int main(int argc, char **argv)
 	sun = load_texture("sun.bmp");
 	moon = load_texture("moon.bmp");
 	earth = load_texture("earth.bmp");
+	wood = load_texture("wood.bmp");
+	wood2 = load_texture("wood2.bmp");
+	wood2front = load_texture("wood2front.bmp");
+	lamp = load_texture("lamp.bmp");
 	glBindTexture(GL_TEXTURE_2D, 0);
+
 
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
@@ -335,6 +347,135 @@ void drawingCB(void)
 	er = glGetError();  //get errors. 0 for no error, find the error codes in: https://www.opengl.org/wiki/OpenGL_Error
 	if (er) printf("error: %d\n", er);
 }
+
+void DrawFence(float from_x, float from_z, float to_x, float to_z, float pole_r, float pole_n) {
+	glPushMatrix();
+	float direction_x = to_x - from_x;
+	float direction_z = to_z - from_z;
+	float direction_size = sqrt((double)direction_x * direction_x + (double)direction_z * direction_z);
+	float direction_normal_x = direction_x / direction_size;
+	float direction_normal_z = direction_z / direction_size;
+	float pole_dist = direction_size / pole_n;
+	glTranslated(from_x, 0, from_z);
+	for (int i = 0; i < pole_n; i++) {
+		VerticalCylinder(pole_r, 1);
+		glTranslatef(direction_normal_x * pole_dist, 0, direction_normal_z * pole_dist);
+	}
+	glPopMatrix();
+}
+
+
+void DrawSign() {
+	float sign_width = 2;
+	float sign_height = 2;
+	float cylinder_height = 1;
+	float cylinder_radius = 0.15;
+	
+	glBindTexture(GL_TEXTURE_2D, wood2front);
+	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+	// Front TBD MAY BE OTHER TEXTURE
+	glBegin(GL_POLYGON);
+	
+	glTexCoord2f(0, 0); glVertex3f(-sign_width / 2,	cylinder_height,				0.05f);
+	glTexCoord2f(1, 0); glVertex3f(	sign_width / 2,	cylinder_height,				0.05f);
+	glTexCoord2f(1, 1); glVertex3f(	sign_width / 2,	cylinder_height + sign_height,	0.05f);
+	glTexCoord2f(0, 1); glVertex3f(-sign_width / 2,	cylinder_height + sign_height,	0.05f);
+	glEnd();
+	glDisable(GL_TEXTURE_GEN_S);
+	glDisable(GL_TEXTURE_GEN_T);
+
+	glBindTexture(GL_TEXTURE_2D, wood2);
+	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+	glEnable(GL_TEXTURE_GEN_S);
+	glEnable(GL_TEXTURE_GEN_T);
+
+	// Back
+	glBegin(GL_POLYGON);
+	glVertex3f(-sign_width / 2, cylinder_height,				-0.05f);
+	glVertex3f(+sign_width / 2, cylinder_height,				-0.05f);
+	glVertex3f(+sign_width / 2, cylinder_height + sign_height,	-0.05f);
+	glVertex3f(-sign_width / 2, cylinder_height + sign_height,	-0.05f);
+	glEnd();
+
+	// Right
+	glBegin(GL_POLYGON);
+	glVertex3f(sign_width / 2 + 0.001f, cylinder_height,				-0.05f);
+	glVertex3f(sign_width / 2 + 0.001f, cylinder_height,				+0.05f);
+	glVertex3f(sign_width / 2 + 0.001f, cylinder_height + sign_height,	+0.05f);
+	glVertex3f(sign_width / 2 + 0.001f, cylinder_height + sign_height,	-0.05f);
+	glEnd();
+
+	// Left
+	glBegin(GL_POLYGON);
+	glVertex3f(-sign_width / 2 + 0.001f, cylinder_height,				-0.05f);
+	glVertex3f(-sign_width / 2 + 0.001f, cylinder_height,				+0.05f);
+	glVertex3f(-sign_width / 2 + 0.001f, cylinder_height + sign_height,	+0.05f);
+	glVertex3f(-sign_width / 2 + 0.001f, cylinder_height + sign_height,	-0.05f);
+	glEnd();
+
+	// Top
+	glBegin(GL_POLYGON);
+	glVertex3f(+sign_width / 2, cylinder_height + sign_height,	+0.05f);
+	glVertex3f(-sign_width / 2, cylinder_height + sign_height,	+0.05f);
+	glVertex3f(-sign_width / 2, cylinder_height + sign_height,	-0.05f);
+	glVertex3f(+sign_width / 2, cylinder_height + sign_height,	-0.05f);
+	glEnd();
+
+	//disabling automatic texture coordinates generation
+	glDisable(GL_TEXTURE_GEN_S);
+	glDisable(GL_TEXTURE_GEN_T);
+
+
+	glBindTexture(GL_TEXTURE_2D, wood);
+
+	glPushMatrix();
+	glTranslatef(- (sign_width/2) - cylinder_radius, 0, 0);
+	VerticalCylinder(cylinder_radius, cylinder_height + sign_height);
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslatef(sign_width/2 + cylinder_radius, 0, 0);
+	VerticalCylinder(cylinder_radius, cylinder_height + sign_height);
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslatef(0, 0, -0.05f - cylinder_radius*2);
+	VerticalCylinder(cylinder_radius, cylinder_height + sign_height + 0.7);
+	glTranslatef(0, cylinder_height + sign_height + 0.5, -cylinder_radius);
+	glRotatef(90.0f, 1.0f, 0.0f, 0.0f);
+	VerticalCylinder(cylinder_radius*0.6, 1.5);
+	glRotatef(-90.0f, 1.0f, 0.0f, 0.0f);
+
+	glTranslated(0, 0.05, 1.54);
+	glRotatef(210.0f, 1.0f, 0.0f, 0.0f);
+	VerticalCylinder(cylinder_radius * 0.6, 0.3);
+	glTranslated(0, 0.3, 0);
+
+	glBindTexture(GL_TEXTURE_2D, lamp);
+	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+	glEnable(GL_TEXTURE_GEN_S);
+	glEnable(GL_TEXTURE_GEN_T);
+	glutSolidSphere(0.085,20,20);
+	glDisable(GL_TEXTURE_GEN_S);
+	glDisable(GL_TEXTURE_GEN_T);
+
+	glPopMatrix();
+
+}
+
+void VerticalCylinder(float radius, float height) {
+	glPushMatrix();
+	GLUquadricObj* quadratic;
+	quadratic = gluNewQuadric();
+	gluQuadricTexture(quadratic, GL_TRUE);
+	glRotatef(-90.0f, 1.0f, 0.0f, 0.0f);
+	gluCylinder(quadratic, radius, radius, height, 32, 32);
+	glPopMatrix();
+}
+
 
 void reshapeCB(int width, int height)
 {
