@@ -8,6 +8,7 @@
 #define CAMERA_SPEED 0.25f
 #define CAMERA_MODEL 0
 #define CAMERA_FREE 1
+#define SWING_MAX_ANG 40
 
 typedef struct {
 	GLfloat x;
@@ -30,10 +31,14 @@ void VerticalCylinder(float radius, float height);
 void drawBlade();
 void DrawSpinner();
 void update(int value);
-void DrawStreetLight();
-void DrawSwings();
+void DrawStreetLight(void);
+void DrawSwings(void);
+float DrawChains(int length);
+void DrawSwing(void);
 
-
+float time = 0;
+int isBanchExist = 0, dirSwingA = 1;
+float swingAng = SWING_MAX_ANG;
 
 int FOVy = 60;
 int camera_mode = CAMERA_MODEL;
@@ -203,7 +208,8 @@ void drawingCB(void)
 		gluLookAt(cameraPos.x, cameraPos.y, cameraPos.z, center.x, center.y, center.z, up.x, up.y, up.z);
 		drawGround();
 	}
-/*
+
+	/*
 	glPushMatrix();
 	glTranslated(0, 1, 0);
 
@@ -214,7 +220,8 @@ void drawingCB(void)
 
 	glTranslated(2, 0, 0);
 	DrawStreetLight();
-*/
+	glPopMatrix();
+	*/
 
 	glPushMatrix();
 	DrawSwings();
@@ -568,7 +575,7 @@ void VerticalCylinder(float radius, float height) {
 	glPopMatrix();
 }
 
-void drawBlade() 
+void drawBlade(void)
 {
 	glPushMatrix();
 	glTranslated(0, 0, -1);
@@ -576,7 +583,7 @@ void drawBlade()
 	glPopMatrix();
 }
 
-void DrawSpinner() 
+void DrawSpinner(void)
 {
 	glPushMatrix();
 	glRotatef(rotationAngle, 1.0, 0.0, 0.0);
@@ -590,7 +597,7 @@ void DrawSpinner()
 	glPopMatrix();
 }
 
-void DrawStreetLight() 
+void DrawStreetLight(void)
 {
 	glPushMatrix();
 	glTranslatef(0, -1.7, 0);
@@ -614,6 +621,7 @@ void DrawStreetLight()
 	glTranslatef(0, 0, 1);
 	glutSolidSphere(0.1, 20, 20);
 	glTranslatef(0, -0.32, -0.1);
+
 	glPushMatrix();
 	glRotated(-90.0, 1, 0, 0);
 	glutSolidCone(0.2, 0.3, 10, 10);
@@ -626,6 +634,7 @@ void DrawStreetLight()
 	GLfloat light_1_ambient[] = { 0.3, 0.3, 0.3, 1 };
 	GLfloat light_1_spotLight[] = { 0, -1, 0, 1 };
 	GLfloat light_1_spotCutOff[] = { 25 };
+
 	glLightfv(GL_LIGHT1, GL_POSITION, light_1_position);
 	glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, light_1_spotLight);
 	glLightfv(GL_LIGHT1, GL_SPOT_CUTOFF, light_1_spotCutOff);
@@ -634,8 +643,8 @@ void DrawStreetLight()
 	glLightfv(GL_LIGHT1, GL_AMBIENT, light_1_ambient);
 
 	glBindTexture(GL_TEXTURE_2D, lamp);
-	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
 	glEnable(GL_TEXTURE_GEN_S);
 	glEnable(GL_TEXTURE_GEN_T);
 	glutSolidSphere(0.12, 20, 20);
@@ -645,51 +654,130 @@ void DrawStreetLight()
 	glPopMatrix(); 
 }
 
-void DrawSwings() 
+void DrawSwings(void) 
 {
 	glPushMatrix();
-	glTranslated(0, -1, 0);
+		glTranslated(0, -1, 0);
 
-	// Right pillar
+		// Right pillar
+		glPushMatrix();
+			glTranslated(2, 0, 0);
+			VerticalCylinder(0.1, 3.0);
+			glTranslated(0, 3, 0);
+			glutSolidSphere(0.1, 10, 10);
+		glPopMatrix();
+
+		// Left pillar
+		glPushMatrix();
+			glTranslated(-2, 0, 0);
+			VerticalCylinder(0.1, 3.0);
+			glTranslated(0, 3, 0);
+			glutSolidSphere(0.1, 10, 10);
+		glPopMatrix();
+
+		// Top Pillar
+		glPushMatrix();
+			glTranslated(2, 3, 0);
+			GLUquadricObj* quadratic;
+			quadratic = gluNewQuadric();
+			gluQuadricTexture(quadratic, GL_TRUE);
+			glRotatef(-90.0f, 0.0f, 1.0f, 0.0f);
+			gluCylinder(quadratic, 0.1, 0.1, 4.0, 32, 32);	
+		glPopMatrix();
+
+		glPushMatrix();
+
+			glTranslated(0, 2.83, 0);
+				
+			// Draw Swing Left
+			glPushMatrix();
+			glTranslated(-1.5, 0, 0);
+			glRotatef(swingAng, 1, 0, 0);
+			DrawSwing();
+			glPopMatrix();
+
+			// Draw Swing Right
+			glPushMatrix();
+			glTranslated(0.5, 0, 0);
+			glRotatef(-swingAng, 1, 0, 0);
+
+			DrawSwing();
+			glPopMatrix();
+
+		glPopMatrix();
+
+	glPopMatrix();
+}
+
+float DrawChains(int length) 
+{
+	float y = -0.035;
+
 	glPushMatrix();
-	glTranslated(2, 0, 0);
-	VerticalCylinder(0.1, 3.0);
-	glTranslated(0, 3, 0);
-	glutSolidSphere(0.1, 10, 10);
+		glutSolidTorus(0.02, 0.06, 10, 10);
+		glScaled(1, 2, 1);
+
+		glTranslatef(0, -0.035, 0);
+		glRotatef(90.0, 0.0, 1.0, 0.0);
+
+		glPushMatrix();
+			for (int i = 0; i < length; i++) {
+				glutSolidTorus(0.01, 0.02, 50, 50);
+				glRotatef(90.0, 0.0, 1.0, 0.0);
+				glTranslatef(0, -0.035, 0);
+				y += -0.035*2;
+			}
+		glPopMatrix();
+
 	glPopMatrix();
 
-	// Left pillar
+	return y;
+}
+
+void DrawSwing(void)
+{
+	float y;
+
 	glPushMatrix();
-	glTranslated(-2, 0, 0);
-	VerticalCylinder(0.1, 3.0);
-	glTranslated(0, 3, 0);
-	glutSolidSphere(0.1, 10, 10);
+		// Chain Left
+		y = DrawChains(30);
+
+		// Draw Banch
+		glPushMatrix();
+		glTranslatef(0, y, 0);
+		glScalef(12.0, 1.0, 5.0);
+		glTranslatef(0.042, 0.0, -0.005);
+		glutSolidCube(0.1);
+		glPopMatrix();
+
+		// Chain Right
+		glTranslated(1, 0, 0);
+		DrawChains(30);
 	glPopMatrix();
 
-	// Top Pillar
-	glPushMatrix();
-	glTranslated(2, 3, 0);
-	GLUquadricObj* quadratic;
-	quadratic = gluNewQuadric();
-	gluQuadricTexture(quadratic, GL_TRUE);
-	glRotatef(-90.0f, 0.0f, 1.0f, 0.0f);
-	gluCylinder(quadratic, 0.1, 0.1, 4.0, 32, 32);	
-	glPopMatrix();
 
-	glutSolidTorus(0.02, 0.06 ,10, 10);
-	glTranslated(1, 0, 0);
-	glScaled(1, 2, 1);
-	glutSolidTorus(0.02, 0.01 ,10, 10);
-
-	glPopMatrix();
 }
 
 void update(int value) 
 {
 	rotationAngle += 2.0f; // Adjust rotation speed as needed
-	if (rotationAngle > 360) {
-		rotationAngle -= 360;
+	rotationAngle = wrapAngle(rotationAngle, 360.0);
+
+	float length = 0.8;
+	float omega = sqrt(9.81 / length);
+	float time_period = 2 * PI * sqrt(length / 9.81);
+
+	time += 16 * 0.001f;
+	swingAng = SWING_MAX_ANG * cos(omega * time);
+
+
+	if (time >= time_period) {
+		time = 0;
 	}
+
+
+
+
 	glutPostRedisplay();
 	glutTimerFunc(16, update, 0); // ~60 FPS
 }
@@ -700,8 +788,6 @@ void plotPixel(int x, int y)
 	glVertex2i(x, y);
 	glEnd();
 }
-
-
 
 /*
 	Colors:
@@ -750,7 +836,6 @@ void plotPixel(int x, int y)
 		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
 	
 */
-
 
 /*
 	// Light Settings
