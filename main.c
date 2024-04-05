@@ -35,6 +35,14 @@ GLuint load_texture(char *name);
 void VerticalCylinder(float radius, float height);
 void DrawSign();
 void DrawFence(float from_x, float from_z, float to_x, float to_z, float pole_r, float pole_n);
+void DrawWindSpinner(void);
+void DrawSpinner(void);
+void VerticalCylinder(float radius, float height);
+void drawBlade(void);
+void DrawSpinner(void);
+void update(int value);
+void DrawStreetLight(void);
+void DrawSwings(void);
 
 int FOVy = 60;
 int camera_mode = CAMERA_MODEL;
@@ -49,12 +57,14 @@ float ballPosition = 0;
 float dxBall = BALL_SPEED;
 
 float earthAngle = 0, earthSelf = 0, sunSelf = 0, moonSelf = 0, moonAngle = 0;
+float rotationAngle = 0.0f;
 
 GLuint ground, ball, wall, sun, moon, earth;
 GLuint wood;
 GLuint wood2;
 GLuint wood2front;
 GLuint lamp;
+GLuint metal;
 
 int main(int argc, char **argv)
 {
@@ -66,10 +76,13 @@ int main(int argc, char **argv)
 	glutInitWindowPosition(100, 100);
 	glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | GLUT_DOUBLE);
 	glutCreateWindow("Graphics project - Children's park");
+	glClearColor(1.0, 1.0, 1.0, 0.0);
 
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_LIGHTING);
 	glEnable(GL_TEXTURE_2D);
+	glEnable(GL_LIGHTING);
+	glEnable(GL_NORMALIZE);
+	glEnable(GL_LIGHT1);
 
 	glEnable(LIGHT_BALL);
 
@@ -93,6 +106,7 @@ int main(int argc, char **argv)
 	lamp = load_texture("lamp.bmp");
 	glBindTexture(GL_TEXTURE_2D, 0);
 
+	glutTimerFunc(0, update, 0); // Start the update timer
 
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
@@ -775,3 +789,253 @@ void TerminationErrorFunc(char *ErrorString)
 
 	exit(0);
 }
+
+void DrawWindSpinner(void)
+{
+	glPushMatrix();
+	glTranslatef(0, -1.5, 0);
+	float CylinderHeight = 3.0f;
+	float CylinderRadius = 0.1f;
+
+	glPushMatrix();
+	// Polished Silver Color
+	GLfloat mat_ambient[] = { 0.23125, 0.23125, 0.23125, 1.0 };
+	GLfloat mat_diffuse[] = { 0.2775, 0.2775, 0.2775, 1.0 };
+	GLfloat mat_specular[] = { 0.773911, 0.773911, 0.773911, 1.0 };
+	GLfloat mat_shininess[] = { 51.22 };
+
+	glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+	VerticalCylinder(0.1, 3.0);
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslated(0, 3, 0);
+	glutSolidSphere(0.1, 20, 20);
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslatef(0, 3.0f, 0);
+
+	glutSolidSphere(0.1, 20, 20);
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslatef(0.2, 3.0f, 0);
+	// Ruby Color
+	GLfloat mat_ambient2[] = { 0.1745, 0.01175, 0.01175, 0.55 };
+	GLfloat mat_diffuse2[] = { 0.61424, 0.04136, 0.04136, 0.55 };
+	GLfloat mat_specular2[] = { 0.727811, 0.626959, 0.626959, 0.55 };
+	GLfloat mat_shininess2[] = { 76.8 };
+
+	glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient2);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse2);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular2);
+	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess2);
+
+	glutSolidSphere(0.1, 20, 20);
+	DrawSpinner();
+	glPopMatrix();
+
+	glPopMatrix();
+}
+
+void drawBlade(void) 
+{
+	glPushMatrix();
+	glTranslated(0, 0, -1);
+	glutSolidCone(0.1, 1.0, 20, 20);
+	glPopMatrix();
+}
+
+void DrawSpinner(void) 
+{
+	glPushMatrix();
+	glRotatef(rotationAngle, 1.0, 0.0, 0.0);
+
+	// Draw the wind spinner blades
+	for (int i = 0; i < 6; ++i) {
+		glRotatef(60.0, 1.0, 0.0, 0.0);
+		drawBlade();
+	}
+
+	glPopMatrix();
+}
+
+void DrawStreetLight(void) 
+{
+	glPushMatrix();
+	glTranslatef(0, -1.7, 0);
+	GLUquadricObj* quadratic;
+	quadratic = gluNewQuadric(); 
+
+	// Polished Silver Color
+	GLfloat mat_ambient[] = { 0.23125, 0.23125, 0.23125, 1.0 };
+	GLfloat mat_diffuse[] = { 0.2775, 0.2775, 0.2775, 1.0 };
+	GLfloat mat_specular[] = { 0.773911, 0.773911, 0.773911, 1.0 };
+	GLfloat mat_shininess[] = { 51.22 };
+	glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+
+	VerticalCylinder(0.1, 4.0);
+	glTranslated(0, 4, 0);
+	glutSolidSphere(0.1, 20, 20);
+	gluCylinder(quadratic, 0.1, 0.1, 1, 32, 32);
+	glTranslatef(0, 0, 1);
+	glutSolidSphere(0.1, 20, 20);
+	glTranslatef(0, -0.32, -0.1);
+	glPushMatrix();
+	glRotated(-90.0, 1, 0, 0);
+	glutSolidCone(0.2, 0.3, 10, 10);
+	glPopMatrix();
+	
+	// lamp
+	GLfloat light_1_position[] = { 0, 3.68, 0.9, 1 };
+	GLfloat light_1_specular[] = { 0.1, 0.1, 0.1, 1 };
+	GLfloat light_1_diffuse[] = { 0.7, 0.7, 0.7, 1 };
+	GLfloat light_1_ambient[] = { 0.3, 0.3, 0.3, 1 };
+	GLfloat light_1_spotLight[] = { 0, -1, 0, 1 };
+	GLfloat light_1_spotCutOff[] = { 25 };
+	glLightfv(GL_LIGHT1, GL_POSITION, light_1_position);
+	glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, light_1_spotLight);
+	glLightfv(GL_LIGHT1, GL_SPOT_CUTOFF, light_1_spotCutOff);
+	glLightfv(GL_LIGHT1, GL_DIFFUSE, light_1_diffuse);
+	glLightfv(GL_LIGHT1, GL_SPECULAR, light_1_specular);
+	glLightfv(GL_LIGHT1, GL_AMBIENT, light_1_ambient);
+
+	glBindTexture(GL_TEXTURE_2D, lamp);
+	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+	glEnable(GL_TEXTURE_GEN_S);
+	glEnable(GL_TEXTURE_GEN_T);
+	glutSolidSphere(0.12, 20, 20);
+	glDisable(GL_TEXTURE_GEN_S);
+	glDisable(GL_TEXTURE_GEN_T);
+
+	glPopMatrix(); 
+}
+
+void DrawSwings(void) 
+{
+	glPushMatrix();
+	glTranslated(0, -1, 0);
+
+	// Right pillar
+	glPushMatrix();
+	glTranslated(2, 0, 0);
+	VerticalCylinder(0.1, 3.0);
+	glTranslated(0, 3, 0);
+	glutSolidSphere(0.1, 10, 10);
+	glPopMatrix();
+
+	// Left pillar
+	glPushMatrix();
+	glTranslated(-2, 0, 0);
+	VerticalCylinder(0.1, 3.0);
+	glTranslated(0, 3, 0);
+	glutSolidSphere(0.1, 10, 10);
+	glPopMatrix();
+
+	// Top Pillar
+	glPushMatrix();
+	glTranslated(2, 3, 0);
+	GLUquadricObj* quadratic;
+	quadratic = gluNewQuadric();
+	gluQuadricTexture(quadratic, GL_TRUE);
+	glRotatef(-90.0f, 0.0f, 1.0f, 0.0f);
+	gluCylinder(quadratic, 0.1, 0.1, 4.0, 32, 32);	
+	glPopMatrix();
+
+	glutSolidTorus(0.02, 0.06 ,10, 10);
+	glTranslated(1, 0, 0);
+	glScaled(1, 2, 1);
+	glutSolidTorus(0.02, 0.01 ,10, 10);
+
+	glPopMatrix();
+}
+
+void update(int value) 
+{
+	rotationAngle += 2.0f; // Adjust rotation speed as needed
+	if (rotationAngle > 360) {
+		rotationAngle -= 360;
+	}
+	glutPostRedisplay();
+	glutTimerFunc(16, update, 0); // ~60 FPS
+}
+
+void plotPixel(int x, int y)
+{
+	glBegin(GL_POINTS);
+	glVertex2i(x, y);
+	glEnd();
+}
+
+
+
+/*
+	Colors:
+
+		// Emerald Color
+		GLfloat mat_ambient1[] = { 0.0215, 0.1745, 0.0215, 0.55 };
+		GLfloat mat_diffuse1[] = { 0.07568, 0.61424, 0.07568, 0.55 };
+		GLfloat mat_specular1[] = { 0.633, 0.727811, 0.633, 0.55 };
+		GLfloat mat_shininess1[] = { 76.8 };
+		glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient1);
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse1);
+		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular1);
+		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess1);
+	
+
+		// Ruby Color
+		GLfloat mat_ambient2[] = { 0.1745, 0.01175, 0.01175, 0.55 };
+		GLfloat mat_diffuse2[] = { 0.61424, 0.04136, 0.04136, 0.55 };
+		GLfloat mat_specular2[] = { 0.727811, 0.626959, 0.626959, 0.55 };
+		GLfloat mat_shininess2[] = { 76.8 };
+		glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient2);
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse2);
+		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular2);
+		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess2);
+
+
+		// Gold Color
+		GLfloat mat_ambient1[] = { 0.24725, 0.2245, 0.0645, 1.0 };
+		GLfloat mat_diffuse1[] = { 0.34615, 0.3143, 0.0903, 1.0 };
+		GLfloat mat_specular1[] = { 0.628281, 0.555802, 0.366065, 1.0 };
+		GLfloat mat_shininess1[] = { 51.2 };
+		glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient1);
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse1);
+		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular1);
+		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess1);
+
+		
+		// Polished Silver Color
+		GLfloat mat_ambient[] = { 0.23125, 0.23125, 0.23125, 1.0 };
+		GLfloat mat_diffuse[] = { 0.2775, 0.2775, 0.2775, 1.0 };
+		GLfloat mat_specular[] = { 0.773911, 0.773911, 0.773911, 1.0 };
+		GLfloat mat_shininess[] = { 51.22 };
+		glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
+		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+	
+*/
+
+
+/*
+	// Light Settings
+
+	GLfloat light_1_specular[] = { 1, 1, 1, 1 };
+	GLfloat light_1_diffuse[] = { 1, 1, 1, 1 };
+	GLfloat light_1_ambient[] = { 1, 1, 1, 1 };
+	GLfloat light_1_position[] = { 5, 5, 0, 0 };
+	glLightfv(GL_LIGHT1, GL_POSITION, light_1_position);
+	glLightfv(GL_LIGHT1, GL_DIFFUSE, light_1_diffuse);
+	glLightfv(GL_LIGHT1, GL_SPECULAR, light_1_specular);
+	glLightfv(GL_LIGHT1, GL_AMBIENT, light_1_ambient);
+
+*/
