@@ -24,9 +24,12 @@ void TimerCB(int value);
 GLubyte *readBMP(char *imagepath, int *width, int *height, int flip);
 void TerminationErrorFunc(char *ErrorString);
 GLuint load_texture(char *name, int flip);
+void VerticalCylinder(float radius, float height);
+void DrawSign();
+void DrawFence(float from_x, float from_z, float to_x, float to_z, float pole_r, float pole_n);
 
 int FOVy = 60;
-int camera_mode = CAMERA_MODEL;
+int camera_mode = CAMERA_FREE;
 int lighting = 1, head_light = 1;
 float angleX = 0, angleY = 0, radius = 5;
 vec3 cameraPos = { 0, 3, 5 };
@@ -35,6 +38,10 @@ vec3 cameraForwardXZ = { 0, 0, -1 };
 vec3 cameraRight = { 1, 0, 0 };
 
 GLuint ground;
+GLuint wood;
+GLuint wood2;
+GLuint wood2front;
+GLuint lamp;
 
 int main(int argc, char **argv)
 {
@@ -59,7 +66,12 @@ int main(int argc, char **argv)
 	glutSpecialFunc(keyboardSpecialCB);
 
 	ground = load_texture("ground.bmp", 1);
+	wood = load_texture("wood.bmp", 1);
+	wood2 = load_texture("wood2.bmp", 1);
+	wood2front = load_texture("wood2front.bmp", 1);
+	lamp = load_texture("lamp.bmp", 1);
 	glBindTexture(GL_TEXTURE_2D, 0);
+
 
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
@@ -181,8 +193,17 @@ void drawingCB(void)
 		drawGround();
 	}
 
-	glColor3f(0.8, 0.8, 0.8);
-	glutSolidTeapot(1);
+
+
+
+	DrawSign();
+	DrawFence(1, 1, 5, 5, 0.1, 25);
+
+
+
+
+
+
 
 	//swapping buffers and displaying
 	glutSwapBuffers();
@@ -191,6 +212,144 @@ void drawingCB(void)
 	er = glGetError();  //get errors. 0 for no error, find the error codes in: https://www.opengl.org/wiki/OpenGL_Error
 	if (er) printf("error: %d\n", er);
 }
+
+void DrawFence(float from_x, float from_z, float to_x, float to_z, float pole_r, float pole_n) {
+	glPushMatrix();
+	float direction_x = to_x - from_x;
+	float direction_z = to_z - from_z;
+	float direction_size = sqrt(direction_x * direction_x + direction_z * direction_z);
+	float direction_normal_x = direction_x / direction_size;
+	float direction_normal_z = direction_z / direction_size;
+	float pole_dist = direction_size / pole_n;
+	glTranslated(from_x, 0, from_z);
+	for (int i = 0; i < pole_n; i++) {
+		VerticalCylinder(pole_r, 1);
+		glTranslated(direction_normal_x * pole_dist, 0, direction_normal_z * pole_dist);
+	}
+	glPopMatrix();
+}
+
+
+void DrawSign() {
+	float sign_width = 2;
+	float sign_height = 2;
+	float cylinder_height = 1;
+	float cylinder_radius = 0.15;
+	
+	glBindTexture(GL_TEXTURE_2D, wood2front);
+	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+	// Front TBD MAY BE OTHER TEXTURE
+	glBegin(GL_POLYGON);
+	
+	glTexCoord2f(0, 0); glVertex3d(-sign_width / 2,	cylinder_height,				0.05f);
+	glTexCoord2f(1, 0); glVertex3d(	sign_width / 2,	cylinder_height,				0.05f);
+	glTexCoord2f(1, 1); glVertex3d(	sign_width / 2,	cylinder_height + sign_height,	0.05f);
+	glTexCoord2f(0, 1); glVertex3d(-sign_width / 2,	cylinder_height + sign_height,	0.05f);
+	glEnd();
+	glDisable(GL_TEXTURE_GEN_S);
+	glDisable(GL_TEXTURE_GEN_T);
+
+	glBindTexture(GL_TEXTURE_2D, wood2);
+	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+	glEnable(GL_TEXTURE_GEN_S);
+	glEnable(GL_TEXTURE_GEN_T);
+
+	// Back
+	glBegin(GL_POLYGON);
+	glVertex3d(-sign_width / 2, cylinder_height,				-0.05f);
+	glVertex3d(+sign_width / 2, cylinder_height,				-0.05f);
+	glVertex3d(+sign_width / 2, cylinder_height + sign_height,	-0.05f);
+	glVertex3d(-sign_width / 2, cylinder_height + sign_height,	-0.05f);
+	glEnd();
+
+	// Right
+	glBegin(GL_POLYGON);
+	glVertex3d(sign_width / 2 + 0.001f, cylinder_height,				-0.05f);
+	glVertex3d(sign_width / 2 + 0.001f, cylinder_height,				+0.05f);
+	glVertex3d(sign_width / 2 + 0.001f, cylinder_height + sign_height,	+0.05f);
+	glVertex3d(sign_width / 2 + 0.001f, cylinder_height + sign_height,	-0.05f);
+	glEnd();
+
+	// Left
+	glBegin(GL_POLYGON);
+	glVertex3d(-sign_width / 2 + 0.001f, cylinder_height,				-0.05f);
+	glVertex3d(-sign_width / 2 + 0.001f, cylinder_height,				+0.05f);
+	glVertex3d(-sign_width / 2 + 0.001f, cylinder_height + sign_height,	+0.05f);
+	glVertex3d(-sign_width / 2 + 0.001f, cylinder_height + sign_height,	-0.05f);
+	glEnd();
+
+	// Top
+	glBegin(GL_POLYGON);
+	glVertex3d(+sign_width / 2, cylinder_height + sign_height,	+0.05f);
+	glVertex3d(-sign_width / 2, cylinder_height + sign_height,	+0.05f);
+	glVertex3d(-sign_width / 2, cylinder_height + sign_height,	-0.05f);
+	glVertex3d(+sign_width / 2, cylinder_height + sign_height,	-0.05f);
+	glEnd();
+
+	//disabling automatic texture coordinates generation
+	glDisable(GL_TEXTURE_GEN_S);
+	glDisable(GL_TEXTURE_GEN_T);
+
+
+	glBindTexture(GL_TEXTURE_2D, wood);
+
+	glPushMatrix();
+	glTranslated(- (sign_width/2) - cylinder_radius, 0, 0);
+	VerticalCylinder(cylinder_radius, cylinder_height + sign_height);
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslated(sign_width/2 + cylinder_radius, 0, 0);
+	VerticalCylinder(cylinder_radius, cylinder_height + sign_height);
+	glPopMatrix();
+
+	
+
+
+
+
+
+
+	glPushMatrix();
+	glTranslated(0, 0, -0.05 - cylinder_radius*2);
+	VerticalCylinder(cylinder_radius, cylinder_height + sign_height + 0.7);
+	glTranslated(0, cylinder_height + sign_height + 0.5, -cylinder_radius);
+	glRotatef(90.0f, 1.0f, 0.0f, 0.0f);
+	VerticalCylinder(cylinder_radius*0.6, 1.5);
+	glRotatef(-90.0f, 1.0f, 0.0f, 0.0f);
+
+	glTranslated(0, 0.05, 1.54);
+	glRotatef(210.0f, 1.0f, 0.0f, 0.0f);
+	VerticalCylinder(cylinder_radius * 0.6, 0.3);
+	glTranslated(0, 0.3, 0);
+
+	
+
+	glBindTexture(GL_TEXTURE_2D, lamp);
+	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+	glEnable(GL_TEXTURE_GEN_S);
+	glEnable(GL_TEXTURE_GEN_T);
+	glutSolidSphere(0.085,20,20);
+	glDisable(GL_TEXTURE_GEN_S);
+	glDisable(GL_TEXTURE_GEN_T);
+
+	glPopMatrix();
+
+}
+
+void VerticalCylinder(float radius, float height) {
+	glPushMatrix();
+	GLUquadricObj* quadratic;
+	quadratic = gluNewQuadric();
+	gluQuadricTexture(quadratic, GL_TRUE);
+	glRotatef(-90.0f, 1.0f, 0.0f, 0.0f);
+	gluCylinder(quadratic, radius, radius, height, 32, 32);
+	glPopMatrix();
+}
+
 
 void reshapeCB(int width, int height)
 {
