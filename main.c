@@ -45,9 +45,12 @@ void DrawSwings(void);
 void DrawFence(vec3 fromPoint, vec3 toPoint, float poleHeight);
 void DrawFlagPole(void);
 void update_flag(int value);
+void DrawFountain(void);
+void DrawDropletsOval(void);
+void update_droplets(int value);
 
 int FOVy = 60;
-int camera_mode = CAMERA_MODEL;
+int camera_mode = CAMERA_FREE;
 int lighting = 1, head_light = 1;
 float angleX = 0, angleY = 0, radius = 5;
 vec3 cameraPos = { 0, 3, 5 };
@@ -68,8 +71,10 @@ GLuint wood2front;
 GLuint lamp;
 GLuint metal;
 GLuint flag;
+GLuint water;
 float droop = 0.0;
 int droop_index = 0;
+float droplets_offset = -90;
 
 int main(int argc, char **argv)
 {
@@ -110,10 +115,15 @@ int main(int argc, char **argv)
 	wood2front = load_texture("wood2front.bmp");
 	lamp = load_texture("lamp.bmp");
 	flag = load_texture("flag.bmp");
+	water = load_texture("water.bmp");
+	metal = load_texture("metal.bmp");
+		
+
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	glutTimerFunc(0, update, 0); // Start the update timer
 	glutTimerFunc(0, update_flag, 0);
+	glutTimerFunc(0, update_droplets, 0);
 
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
@@ -367,7 +377,16 @@ void drawingCB(void)
 	}
 	//glTranslatef(0, 2, 0);
 	//drawSolarSystem();
-	drawBouncingBall();
+	//drawBouncingBall();
+
+	float boundery = 10;
+
+	DrawFence((vec3) { -boundery, 0, boundery }, (vec3) { -boundery, 0, -boundery }, 2);
+	DrawFence((vec3) { -boundery, 0, -boundery },  (vec3) { boundery, 0, -boundery }, 2);
+	DrawFence((vec3) { boundery, 0, -boundery }, (vec3) { boundery, 0, boundery }, 2);
+
+	//DrawFountain();
+	DrawFountain();
 
 	//swapping buffers and displaying
 	glutSwapBuffers();
@@ -375,6 +394,107 @@ void drawingCB(void)
 	//check for errors
 	er = glGetError();  //get errors. 0 for no error, find the error codes in: https://www.opengl.org/wiki/OpenGL_Error
 	if (er) printf("error: %d\n", er);
+}
+
+void DrawFountain(void) {
+	glPushMatrix();
+	glTranslatef(0, 0.0001, 0);
+	
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE); // GL_MODULATE, GL_DECAL, GL_BLEND, or GL_REPLACE.
+	
+	glPushMatrix();
+	for (int i = 0; i < 360; i++) {
+		glPushMatrix();
+		glTranslatef(3, 0, 0);
+		VerticalCylinder(0.3, 1.1);
+		glPopMatrix();
+		glRotatef(1, 0, 1, 0);
+	}
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslatef(0, 1.1, 0);
+	glRotatef(90, 1, 0, 0);
+	glutSolidTorus(0.3, 3, 50, 100);
+	glPopMatrix();
+
+	VerticalCylinder(0.2, 2.8);
+	glPushMatrix();
+	glTranslatef(0, 2.8, 0);
+	glRotatef(90, 1, 0 ,0);
+	glutSolidTorus(0.1, 0.25, 20, 20);
+	glPopMatrix();
+
+
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	
+	
+	///////// DROPLETS
+
+	for (int i = 0; i < 10; i++) {
+		glPushMatrix();
+		glRotatef(36 * i, 0, 1, 0);
+		glTranslatef(1, 0, 0);
+		glScalef(0.5, 1, 1);
+		DrawDropletsOval();
+
+		glPopMatrix();
+	}
+	
+	////
+	
+	
+	GLUquadric* sphere = gluNewQuadric();
+	gluQuadricTexture(sphere, GL_TRUE);
+	glBindTexture(GL_TEXTURE_2D, water);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE); // GL_MODULATE, GL_DECAL, GL_BLEND, or GL_REPLACE.
+
+	glPushMatrix();
+	glTranslatef(0, 1, 0);
+	glScalef(1, 0.1, 1);
+	gluSphere(sphere, 2.85, 30, 30);
+	gluDeleteQuadric(sphere);
+	glPopMatrix();
+
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	
+
+	glPopMatrix();
+}
+
+void DrawDropletsOval(void) {
+	float raius = 1;
+	float scale = 0.3;
+
+	glPushMatrix();
+	glTranslatef(0, 2, 0);
+	for (int i = droplets_offset; i < 180; i += 10) {
+		glPushMatrix();
+		glRotatef(i, 0, 0, 1);
+		glTranslatef(2, 0, 0);
+
+		GLUquadric* sphere = gluNewQuadric();
+		gluQuadricTexture(sphere, GL_TRUE);
+		glBindTexture(GL_TEXTURE_2D, water);
+		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE); // GL_MODULATE, GL_DECAL, GL_BLEND, or GL_REPLACE.
+
+		glScalef(1, 2.5, 1);
+		gluSphere(sphere, 0.02, 10, 10);
+		gluDeleteQuadric(sphere);
+
+		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		
+		glPopMatrix();
+		
+	}
+
+
+	glPopMatrix();
 }
 
 void DrawFence(vec3 fromPoint, vec3 toPoint, float poleHeight) {
@@ -788,6 +908,14 @@ void update_flag(int value) {
 	glutPostRedisplay();
 }
 
+void update_droplets(int value) {
+	droplets_offset--;
+	if (droplets_offset <= -100) {
+		droplets_offset = -90;
+	}
+	glutTimerFunc(16, update_droplets, 0);
+	glutPostRedisplay();
+}
 
 
 // Function to load bmp file
