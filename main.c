@@ -25,8 +25,10 @@ GLubyte *readBMP(char *imagepath, int *width, int *height, int flip);
 void TerminationErrorFunc(char *ErrorString);
 GLuint load_texture(char *name, int flip);
 void VerticalCylinder(float radius, float height);
-void DrawSign();
-void DrawFence(float from_x, float from_z, float to_x, float to_z, float pole_r, float pole_n);
+void DrawSign(void);
+void DrawFence(vec3 fromPoint, vec3 toPoint, float poleHeight);
+void DrawFlagPole(void);
+void update_flag(void);
 
 int FOVy = 60;
 int camera_mode = CAMERA_FREE;
@@ -42,6 +44,10 @@ GLuint wood;
 GLuint wood2;
 GLuint wood2front;
 GLuint lamp;
+GLuint flag;
+float droop = 0.0;
+int droop_index = 0;
+
 
 int main(int argc, char **argv)
 {
@@ -70,8 +76,10 @@ int main(int argc, char **argv)
 	wood2 = load_texture("wood2.bmp", 1);
 	wood2front = load_texture("wood2front.bmp", 1);
 	lamp = load_texture("lamp.bmp", 1);
+	flag = load_texture("flag.bmp", 1);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
+	glutTimerFunc(0, update_flag, 0);
 
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
@@ -124,6 +132,12 @@ vec3 vec3_neg(vec3 a)
 vec3 vec3_sub(vec3 a, vec3 b)
 {
 	return vec3_add(a, vec3_neg(b));
+}
+
+float vec3_dist(vec3 a, vec3 b) {
+	return sqrt(pow(a.x - b.x, 2) +
+				pow(a.y - b.y, 2) +
+				pow(a.z - b.z, 2));
 }
 
 void drawGround(void)
@@ -195,9 +209,9 @@ void drawingCB(void)
 
 
 
-
-	DrawSign();
-	DrawFence(1, 1, 5, 5, 0.1, 25);
+	DrawFlagPole();
+	//DrawSign();
+	DrawFence((vec3) { 16, 0, 16 }, (vec3) { 9, 0, 9 }, 3);
 
 
 
@@ -213,24 +227,66 @@ void drawingCB(void)
 	if (er) printf("error: %d\n", er);
 }
 
-void DrawFence(float from_x, float from_z, float to_x, float to_z, float pole_r, float pole_n) {
+void DrawFence(vec3 fromPoint, vec3 toPoint, float poleHeight) {
 	glPushMatrix();
-	float direction_x = to_x - from_x;
-	float direction_z = to_z - from_z;
-	float direction_size = sqrt(direction_x * direction_x + direction_z * direction_z);
-	float direction_normal_x = direction_x / direction_size;
-	float direction_normal_z = direction_z / direction_size;
-	float pole_dist = direction_size / pole_n;
-	glTranslated(from_x, 0, from_z);
-	for (int i = 0; i < pole_n; i++) {
-		VerticalCylinder(pole_r, 1);
-		glTranslated(direction_normal_x * pole_dist, 0, direction_normal_z * pole_dist);
+	float poleDistance = 0.4f;
+	float poleRadius = 0.1f;
+	fromPoint.y = toPoint.y = 0;
+	vec3 direction = vec3_sub(toPoint, fromPoint);
+	float distance = vec3_dist(toPoint, fromPoint);
+	float n_poles = floor(distance / poleDistance);
+	vec3 normal_direction = vec3_scale(direction, 1/distance);
+	vec3 scaled_direction = vec3_scale(normal_direction, poleDistance);
+	glTranslated(fromPoint.x, fromPoint.y, fromPoint.z);
+	glBindTexture(GL_TEXTURE_2D, wood);
+	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+	glEnable(GL_TEXTURE_GEN_S);
+	glEnable(GL_TEXTURE_GEN_T);
+	for (int i = 0; i < n_poles; i++) {
+		VerticalCylinder(poleRadius, poleHeight);
+		glTranslated(scaled_direction.x, scaled_direction.y, scaled_direction.z);
 	}
+	glDisable(GL_TEXTURE_GEN_S);
+	glDisable(GL_TEXTURE_GEN_T);
 	glPopMatrix();
 }
 
+void DrawFlagPole(void) {
+	float poleRadius = 0.1f;
+	float poleHeight = 4.5;
 
-void DrawSign() {
+	glPushMatrix();
+	glBindTexture(GL_TEXTURE_2D, wood);
+	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+	glEnable(GL_TEXTURE_GEN_S);
+	glEnable(GL_TEXTURE_GEN_T);
+	VerticalCylinder(poleRadius, poleHeight);
+	glTranslatef(0, poleHeight, 0);
+	glutSolidSphere(poleRadius * 1.5, 10, 10);
+	glDisable(GL_TEXTURE_GEN_S);
+	glDisable(GL_TEXTURE_GEN_T);
+
+	glTranslatef(poleRadius, 0, 0);
+
+	glBindTexture(GL_TEXTURE_2D, flag);
+	glBegin(GL_POLYGON);
+
+	float w = 2;
+	float h = w * 2 / 3;
+	glNormal3f(0, 0, 1);
+	glTexCoord2f(1, 1); glVertex3f(0, 0, 0);
+	glTexCoord2f(0, 1); glVertex3f(-w, -droop, 0);
+	glTexCoord2f(0, 0); glVertex3f(-w, -droop-h, 0);
+	glTexCoord2f(1, 0); glVertex3f(0, -h, 0);
+
+	glEnd();
+
+	glPopMatrix();
+}
+
+void DrawSign(void) {
 	float sign_width = 2;
 	float sign_height = 2;
 	float cylinder_height = 1;
@@ -348,8 +404,8 @@ void VerticalCylinder(float radius, float height) {
 	glRotatef(-90.0f, 1.0f, 0.0f, 0.0f);
 	gluCylinder(quadratic, radius, radius, height, 32, 32);
 	glPopMatrix();
+	gluDeleteQuadric(quadratic);
 }
-
 
 void reshapeCB(int width, int height)
 {
@@ -555,8 +611,19 @@ void keyboardSpecialCB(int key, int x, int y)
 
 void TimerCB(int value)
 {
-	
 }
+
+void update_flag(void) {
+	float droop_values[16] = {0.005, 0.01, 0.02, 0.03, 0.05, 0.07, 0.09, 0.11, 0.12, 
+							0.11, 0.09, 0.07, 0.05, 0.03, 0.02, 0.01 }; // 16
+	droop = droop_values[droop_index];
+	droop_index++;
+	droop_index = droop_index == 16 ? 0 : droop_index;
+	glutTimerFunc(64, update_flag, 0);
+	glutPostRedisplay();
+}
+
+
 
 // Function to load bmp file
 // buffer for the image is allocated in this function, you should free this buffer
