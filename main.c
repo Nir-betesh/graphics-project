@@ -18,7 +18,6 @@
 #define PHASE_TO_END 1
 #define PHASE_END 2
 #define TIME_RATE 0.05f
-
 #define LIGHT_HEAD GL_LIGHT0
 #define LIGHT_BALL GL_LIGHT1
 #define LIGHT_SUN GL_LIGHT2
@@ -63,7 +62,9 @@ float invLerp(float a, float b, float c);
 void DrawSwingKid(int gender);
 void DrawHead(void);
 void DrawArm(void);
+void Drawlimb(float radius, float height);
 void DrawLeg(int gender);
+void DrawBody(float radius, float height, int gender);
 
 float time = 0;
 int isBanchExist = 0, dirSwingA = 1;
@@ -77,15 +78,11 @@ vec3 cameraPos = { 0, 3, 5 };
 vec3 cameraForward = { 0, 0, -1 };
 vec3 cameraForwardXZ = { 0, 0, -1 };
 vec3 cameraRight = { 1, 0, 0 };
-float xBP, yBP, zBP;
-float xLB, yLB, zLB;
-int isLeg = 1;
 
 float jointAngLeg = 30;
-
+float jointAng;
 float ballPosition = 0;
 float dxBall = BALL_SPEED;
-
 float earthAngle = 0, earthSelf = 0, sunSelf = 0, moonSelf = 0, moonAngle = 0;
 float rotationAngle = 0.0f;
 
@@ -424,7 +421,7 @@ void drawingCB(void)
 	}
 	//glTranslatef(0, 2, 0);
 	//drawSolarSystem();
-	drawBouncingBall();
+	//drawBouncingBall();
 	/*
 	float boundery = 10;
 
@@ -452,8 +449,13 @@ void drawingCB(void)
 	DrawFountain();
 	*/
 
+	//drawSolarSystem();
+	//DrawFountain();
 	//swapping buffers and displaying
+	//DrawStreetLight();
+	DrawSwings();
 	glutSwapBuffers();
+	//DrawWindSpinner();
 
 	//check for errors
 	er = glGetError();  //get errors. 0 for no error, find the error codes in: https://www.opengl.org/wiki/OpenGL_Error
@@ -468,7 +470,6 @@ void DrawFountain(void)
 	glPushMatrix();
 	glTranslatef(0, 0.0001, 0);
 	
-
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	
@@ -495,7 +496,6 @@ void DrawFountain(void)
 	glutSolidTorus(0.1, 0.25, 20, 20);
 	glPopMatrix();
 
-
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	
@@ -512,9 +512,6 @@ void DrawFountain(void)
 		glPopMatrix();
 	}
 	
-	////
-	
-	
 	glBindTexture(GL_TEXTURE_2D, water);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
@@ -528,7 +525,6 @@ void DrawFountain(void)
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	
-
 	glPopMatrix();
 }
 
@@ -1076,6 +1072,7 @@ float lerp(float a, float b, float t)
 {
 	return a * (1 - t) + b * t;
 }
+
 float invLerp(float a, float b, float c)
 {
 	return (c - a) / (b - a);
@@ -1202,29 +1199,6 @@ void DrawWindSpinner(void)
 	glPopMatrix();
 }
 
-void drawBlade(void)
-{
-	glPushMatrix();
-	glTranslated(0, 0, -1);
-	glutSolidCone(0.1, 1.0, 20, 20);
-	glPopMatrix();
-}
-
-void DrawSpinner(void)
-{
-	int i;
-	glPushMatrix();
-	glRotatef(rotationAngle, 1.0, 0.0, 0.0);
-
-	// Draw the wind spinner blades
-	for (i = 0; i < 6; ++i) {
-		glRotatef(60.0, 1.0, 0.0, 0.0);
-		drawBlade();
-	}
-
-	glPopMatrix();
-}
-
 void DrawStreetLight(void)
 {
 	// Polished Silver Color
@@ -1326,7 +1300,7 @@ void DrawSwings(void)
 				DrawSwing();
 				glTranslatef(0.5, -1.85, 0);
 				glScalef(0.9, 0.9, 0.9);
-				DrawSwingKid(0); // 
+				DrawSwingKid(0); 
 			glPopMatrix();
 
 			// Draw Swing Right
@@ -1336,10 +1310,74 @@ void DrawSwings(void)
 				DrawSwing();
 				glTranslatef(0.5, -1.85, 0);
 				glScalef(0.9, 0.9, 0.9);
-				DrawSwingKid(1);//
+				DrawSwingKid(1);
 			glPopMatrix();
 
 		glPopMatrix();
+
+	glPopMatrix();
+}
+
+void DrawSwingKid(int gender)
+{
+	vec3 legPos = {0.14, -0.1, 0.0};
+	vec3 armPos = { 0.23, 0.5, 0.0 };
+
+	glPushMatrix();
+		// Body
+		glTranslatef(0.0, -0.05, -0.18);
+		DrawBody(0.25, 0.6, gender);
+		// Head
+		DrawHead();
+
+		glPushMatrix();
+			// Left-leg
+			glTranslatef(legPos.x, legPos.y, legPos.z);
+			DrawLeg(gender);
+		glPopMatrix();
+
+		glPushMatrix();
+			// Right-leg
+			glTranslatef(-legPos.x, legPos.y, legPos.z);
+			DrawLeg(gender);
+		glPopMatrix();
+
+		// Left-arm
+		glPushMatrix();
+			glTranslatef(armPos.x, armPos.y, armPos.z);
+			glRotatef(80.0, 1.0, 0.85, 0.0);
+			DrawArm();
+		glPopMatrix();	
+
+		// Right-arm
+		glPushMatrix();
+			glTranslatef(-armPos.x, armPos.y, armPos.z);
+			glRotatef(80.0, 1.0, -0.85, 0.0);
+			DrawArm();
+		glPopMatrix();
+	glPopMatrix();
+
+}
+
+void drawBlade(void)
+{
+	glPushMatrix();
+	glTranslated(0, 0, -1);
+	glutSolidCone(0.1, 1.0, 20, 20);
+	glPopMatrix();
+}
+
+void DrawSpinner(void)
+{
+	int i;
+	glPushMatrix();
+	glRotatef(rotationAngle, 1.0, 0.0, 0.0);
+
+	// Draw the wind spinner blades
+	for (i = 0; i < 6; ++i) {
+		glRotatef(60.0, 1.0, 0.0, 0.0);
+		drawBlade();
+	}
 
 	glPopMatrix();
 }
@@ -1378,6 +1416,8 @@ void DrawSwing(void)
 		// Chain Left
 		y = DrawChains(30);
 
+		glBindTexture(GL_TEXTURE_2D, wood);
+		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 		// Draw Banch
 		glPushMatrix();
 		glTranslatef(0, y, 0);
@@ -1385,6 +1425,8 @@ void DrawSwing(void)
 		glTranslatef(0.042, 0.0, -0.005);
 		glutSolidCube(0.1);
 		glPopMatrix();
+		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+		glBindTexture(GL_TEXTURE_2D, 0);
 
 		// Chain Right
 		glTranslated(1, 0, 0);
@@ -1475,47 +1517,6 @@ void Drawlimb(float radius, float height)
 	glPopMatrix();
 }
 
-void DrawSwingKid(int gender)
-{
-	vec3 legPos = {0.14, -0.1, 0.0};
-	vec3 armPos = { 0.23, 0.5, 0.0 };
-
-	glPushMatrix();
-		// Body
-		glTranslatef(0.0, -0.05, -0.18);
-		DrawBody(0.25, 0.6, gender);
-		// Head
-		DrawHead();
-
-		glPushMatrix();
-			// Left-leg
-			glTranslatef(legPos.x, legPos.y, legPos.z);
-			DrawLeg(gender);
-		glPopMatrix();
-
-		glPushMatrix();
-			// Right-leg
-			glTranslatef(-legPos.x, legPos.y, legPos.z);
-			DrawLeg(gender);
-		glPopMatrix();
-
-		// Left-arm
-		glPushMatrix();
-			glTranslatef(armPos.x, armPos.y, armPos.z);
-			glRotatef(80.0, 1.0, 0.85, 0.0);
-			DrawArm();
-		glPopMatrix();	
-
-		// Right-arm
-		glPushMatrix();
-			glTranslatef(-armPos.x, armPos.y, armPos.z);
-			glRotatef(80.0, 1.0, -0.85, 0.0);
-			DrawArm();
-		glPopMatrix();
-	glPopMatrix();
-
-}
-
 void DrawLeg(int gender)
 {
 	float thighLength = 0.5;
@@ -1566,15 +1567,19 @@ void update(int value)
 	//jointAngLeg = cos(omega * time) < 0 ? 0 : 90;
 
 	//------------------------
-		if (isForward) {
-			jointAngLeg++;
-		}
-		else {
-			jointAngLeg--;
-		}
+	jointAngLeg = abs(90 * cos(omega * time));
 
-		isForward = jointAngLeg > 0.9 ? 0 : 1;
-		isForward = jointAngLeg < -0.9 ? 1 : 0;
+	/*
+	if (isForward && jointAngLeg < 90) {
+		jointAngLeg++;
+	}
+	else if (!isForward && jointAngLeg >= 90) {
+		jointAngLeg--;
+	}
+	isForward = jointAng > 0.9 ? 0 : 1;
+	isForward = jointAng < -0.9 ? 1 : 0;
+	*/
+		//printf("is forward? = %d, angle is: %f ,other ang:%f\n", isForward, jointAngLeg, jointAng);
 
 	//------------------------
 	//printf("angle = %f \n", cos(omega * time));
