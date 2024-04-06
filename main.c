@@ -12,9 +12,17 @@
 #define BALL_SPEED 0.07f
 #define CELESTIAL_SELF_SPIN 1.8f
 #define CELESTIAL_SPIN 1.2f
+#define TIME_DAY 0
+#define TIME_NIGHT 1
+#define PHASE_TO_TWILIGHT 0
+#define PHASE_TO_END 1
+#define PHASE_END 2
+#define TIME_RATE 0.05f
 
 #define LIGHT_HEAD GL_LIGHT0
 #define LIGHT_BALL GL_LIGHT1
+#define LIGHT_SUN GL_LIGHT2
+#define LIGHT_STREETLAMP GL_LIGHT3
 #define SWING_MAX_ANG 40
 
 typedef struct {
@@ -30,6 +38,7 @@ void keyboardCB(unsigned char key, int x, int y);
 void keyboardSpecialCB(int key, int x, int y);
 void animateBouncingBall(int value);
 void animateSolarSystem(int value);
+void animateTimeChange(int value);
 GLubyte *readBMP(char *imagepath, int *width, int *height);
 void TerminationErrorFunc(char *ErrorString);
 GLuint load_texture(char *name);
@@ -49,6 +58,8 @@ void DrawDropletsOval(void);
 void update_droplets(int value);
 float DrawChains(int length);
 void DrawSwing(void);
+float lerp(float a, float b, float t);
+float invLerp(float a, float b, float c);
 
 float time = 0;
 int isBanchExist = 0, dirSwingA = 1;
@@ -68,6 +79,13 @@ float dxBall = BALL_SPEED;
 
 float earthAngle = 0, earthSelf = 0, sunSelf = 0, moonSelf = 0, moonAngle = 0;
 float rotationAngle = 0.0f;
+
+int timeOfDay = TIME_DAY;
+int transPhase = PHASE_END;
+float phase = 0;
+float clearColor[] = { 135.0f / 255, 206.0f / 255, 235.0f / 255 };
+GLfloat sunLightColor[] = { 1, 1, 1, 1 };
+float sunRotation = 0;
 
 GLuint ground, ball, wall, sun, moon, earth;
 GLuint wood;
@@ -97,9 +115,9 @@ int main(int argc, char **argv)
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_LIGHTING);
 	glEnable(GL_NORMALIZE);
-	glEnable(GL_LIGHT1);
 
 	glEnable(LIGHT_BALL);
+	glEnable(LIGHT_STREETLAMP);
 
 	//registering callbacks
 	glutDisplayFunc(drawingCB);
@@ -194,9 +212,11 @@ float vec3_dist(vec3 a, vec3 b)
 void drawGround(void)
 {
 	int i, j;
+	GLfloat diffuse[] = { 1, 1, 1, 1 };
 	glBindTexture(GL_TEXTURE_2D, ground);
 	glColor3f(0, 0.3, 0);
 	glNormal3f(0, 1, 0);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, diffuse);
 	glBegin(GL_QUADS);
 	for (i = -200; i < 200; i += 2) {
 		for (j = -200; j < 200; j += 2) {
@@ -255,9 +275,9 @@ void drawBouncingBall(void)
 	glEnd();
 
 	if (ballPosition < -0.6)
-		scale = 1 - ((ballPosition + 0.6) / (-1 + 0.6));
+		scale = invLerp(-1, -0.6, ballPosition);
 	else if (ballPosition > 0.6)
-		scale = 1 - ((ballPosition - 0.6) / (1 - 0.6));
+		scale = invLerp(1, 0.6, ballPosition);
 
 	glBindTexture(GL_TEXTURE_2D, ball);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
@@ -343,11 +363,15 @@ void drawingCB(void)
 	GLfloat light0Pos[] = { 0, 0, 0, 1 };
 	GLfloat light0Color[] = { 1, 1, 1, 1 };
 	GLfloat light0Ambient[] = { 0.2, 0.2, 0.2, 1 };
+	GLfloat sunPos[] = { 0, 1, 0, 0 };
 	vec3 center = vec3_add(cameraPos, cameraForward);
 	vec3 up = { 0, 1, 0 };
 
 	//clearing the background
-	glClearColor(0.0, 0.0, 0.0, 0.0);
+	if (camera_mode == CAMERA_MODEL)
+		glClearColor(0, 0, 0, 0);
+	else
+		glClearColor(clearColor[0], clearColor[1], clearColor[2], 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	//initializing modelview transformation matrix
@@ -361,6 +385,7 @@ void drawingCB(void)
 	if (camera_mode == CAMERA_MODEL) {
 		glEnable(LIGHT_HEAD);
 		glLightf(LIGHT_HEAD, GL_QUADRATIC_ATTENUATION, 0);
+		glDisable(LIGHT_SUN);
 
 		glTranslatef(0, 0, -radius);
 		glRotatef(angleX, 1, 0, 0);
@@ -378,6 +403,12 @@ void drawingCB(void)
 		if (angleX < -45)
 			up = cameraForwardXZ;
 		gluLookAt(cameraPos.x, cameraPos.y, cameraPos.z, center.x, center.y, center.z, up.x, up.y, up.z);
+		glEnable(LIGHT_SUN);
+		glPushMatrix();
+		glRotatef(sunRotation, 0, 0, -1);
+		glLightfv(LIGHT_SUN, GL_POSITION, sunPos);
+		glLightfv(LIGHT_SUN, GL_DIFFUSE, sunLightColor);
+		glPopMatrix();
 		drawGround();
 	}
 	//glTranslatef(0, 2, 0);
@@ -390,7 +421,6 @@ void drawingCB(void)
 	DrawFence((vec3) { -boundery, 0, -boundery },  (vec3) { boundery, 0, -boundery }, 2);
 	DrawFence((vec3) { boundery, 0, -boundery }, (vec3) { boundery, 0, boundery }, 2);
 
-	/*
 	glPushMatrix();
 	glTranslated(0, 1, 0);
 
@@ -863,6 +893,13 @@ void keyboardCB(unsigned char key, int x, int y) {
 		head_light = !head_light;
 		glutPostRedisplay();
 		break;
+	case 'c':
+		if (transPhase != PHASE_END)
+			return;
+		timeOfDay = timeOfDay == TIME_DAY ? TIME_NIGHT : TIME_DAY;
+		transPhase = PHASE_TO_TWILIGHT;
+		phase = 0;
+		glutTimerFunc(ANIMATION_DELAY, animateTimeChange, 0);
 	}
 }
 
@@ -921,7 +958,80 @@ void animateSolarSystem(int value)
 	glutTimerFunc(ANIMATION_DELAY, animateSolarSystem, 0);
 }
 
-void update_flag(int value) {
+void animateTimeChange(int value)
+{
+	float day[] = { 135.0f / 255, 206.0f / 255, 235.0f / 255 };
+	float twilight[] = { 218.0f / 255, 91.0f / 255, 20.0f / 255 };
+	float night[] = { 19.0f / 255, 24.0f / 255, 98.0f / 255 };
+	GLfloat sunlight[] = { 1, 1, 1, 1 };
+	GLfloat nightlight[] = { 0, 0, 0, 1 };
+	float *from, *to, fromAngle, toAngle;
+	GLfloat *fromLight, *toLight;
+
+	if (timeOfDay == TIME_NIGHT) {
+		if (transPhase == PHASE_TO_TWILIGHT) {
+			from = day;
+			fromLight = sunlight;
+			fromAngle = 0;
+			to = twilight;
+			toLight = twilight;
+			toAngle = 45;
+		}
+		else {
+			from = twilight;
+			fromLight = twilight;
+			fromAngle = 45;
+			to = night;
+			toLight = nightlight;
+			toAngle = 90;
+		}
+	}
+	else {
+		if (transPhase == PHASE_TO_TWILIGHT) {
+			from = night;
+			fromLight = nightlight;
+			fromAngle = -90;
+			to = twilight;
+			toLight = twilight;
+			toAngle = -45;
+		}
+		else {
+			from = twilight;
+			fromLight = twilight;
+			fromAngle = -45;
+			to = day;
+			toLight = sunlight;
+			toAngle = 0;
+		}
+	}
+
+	if (phase > 1 - TIME_RATE)
+		phase = 1;
+	clearColor[0] = lerp(from[0], to[0], phase);
+	clearColor[1] = lerp(from[1], to[1], phase);
+	clearColor[2] = lerp(from[2], to[2], phase);
+	sunLightColor[0] = lerp(fromLight[0], toLight[0], phase);
+	sunLightColor[1] = lerp(fromLight[1], toLight[1], phase);
+	sunLightColor[2] = lerp(fromLight[2], toLight[2], phase);
+	sunRotation = lerp(fromAngle, toAngle, phase);
+	glutPostRedisplay();
+	
+	phase += TIME_RATE;
+	if (phase >= 1) {
+		phase = 0;
+		if (transPhase == PHASE_TO_END) {
+			transPhase = PHASE_END;
+			return;
+		}
+		else {
+			transPhase = PHASE_TO_END;
+		}
+	}
+	glutTimerFunc(ANIMATION_DELAY, animateTimeChange, value);
+}
+
+void update_flag(int value)
+{
 	float droop_values[16] = {0.005, 0.01, 0.02, 0.03, 0.05, 0.07, 0.09, 0.11, 0.12, 
 							0.11, 0.09, 0.07, 0.05, 0.03, 0.02, 0.01 }; // 16
 	droop = droop_values[droop_index];
@@ -931,7 +1041,8 @@ void update_flag(int value) {
 	glutPostRedisplay();
 }
 
-void update_droplets(int value) {
+void update_droplets(int value)
+{
 	droplets_offset--;
 	if (droplets_offset <= -100) {
 		droplets_offset = -90;
@@ -940,6 +1051,14 @@ void update_droplets(int value) {
 	glutPostRedisplay();
 }
 
+float lerp(float a, float b, float t)
+{
+	return a * (1 - t) + b * t;
+}
+float invLerp(float a, float b, float c)
+{
+	return (c - a) / (b - a);
+}
 
 // Function to load bmp file
 // buffer for the image is allocated in this function, you should free this buffer
@@ -1122,12 +1241,12 @@ void DrawStreetLight(void)
 	GLfloat light_1_spotLight[] = { 0, -1, 0, 1 };
 	GLfloat light_1_spotCutOff[] = { 25 };
 
-	glLightfv(GL_LIGHT1, GL_POSITION, light_1_position);
-	glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, light_1_spotLight);
-	glLightfv(GL_LIGHT1, GL_SPOT_CUTOFF, light_1_spotCutOff);
-	glLightfv(GL_LIGHT1, GL_DIFFUSE, light_1_diffuse);
-	glLightfv(GL_LIGHT1, GL_SPECULAR, light_1_specular);
-	glLightfv(GL_LIGHT1, GL_AMBIENT, light_1_ambient);
+	glLightfv(LIGHT_STREETLAMP, GL_POSITION, light_1_position);
+	glLightfv(LIGHT_STREETLAMP, GL_SPOT_DIRECTION, light_1_spotLight);
+	glLightfv(LIGHT_STREETLAMP, GL_SPOT_CUTOFF, light_1_spotCutOff);
+	glLightfv(LIGHT_STREETLAMP, GL_DIFFUSE, light_1_diffuse);
+	glLightfv(LIGHT_STREETLAMP, GL_SPECULAR, light_1_specular);
+	glLightfv(LIGHT_STREETLAMP, GL_AMBIENT, light_1_ambient);
 
 	glBindTexture(GL_TEXTURE_2D, lamp);
 	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
@@ -1209,7 +1328,7 @@ float DrawChains(int length)
 
 		glPushMatrix();
 			for (int i = 0; i < length; i++) {
-				glutSolidTorus(0.01, 0.02, 50, 50);
+				glutSolidTorus(0.01, 0.02, 10, 10);
 				glRotatef(90.0, 0.0, 1.0, 0.0);
 				glTranslatef(0, -0.035, 0);
 				y += -0.035*2;
@@ -1264,13 +1383,6 @@ void update(int value)
 
 	glutPostRedisplay();
 	glutTimerFunc(16, update, 0); // ~60 FPS
-}
-
-void plotPixel(int x, int y)
-{
-	glBegin(GL_POINTS);
-	glVertex2i(x, y);
-	glEnd();
 }
 
 /*
