@@ -37,11 +37,8 @@ float DrawChains(int length);
 void DrawSwing(void);
 void DrawSwingKid(int sex);
 void DrawHead(void);
-void drawHand(void);
-void DrawLimbs(float limbDirBodyX, float limbDirBodyY, float limbDirBodyZ,
-	float jointAng,
-	float limbDirLimbX, float limbDirLimbY, float limbDirLimbZ,
-	float bodyLimbLength, int isLeg);
+void DrawArm(void);
+void DrawLeg(void);
 
 
 float time = 0;
@@ -59,8 +56,13 @@ vec3 cameraRight = { 1, 0, 0 };
 float xBP, yBP, zBP;
 float xLB, yLB, zLB;
 int isLeg = 1;
-float jointAng;
-float jointAngLeftLeg = 90, jointAngRightLeg = 90, jointAngLeftArm = 70, jointAngRightArm = 70;
+
+
+/// <summary>
+/// //////////////
+/// </summary>
+float jointAngLeg = 30;
+
 
 // Global variables
 float rotationAngle = 0.0f;
@@ -246,13 +248,17 @@ void drawingCB(void)
 	DrawStreetLight();
 	glPopMatrix();
 
-	*/
 
 	glPushMatrix();
 		DrawSwings();
 	glPopMatrix();
+	*/
 
-
+	glPushMatrix();
+	//DrawLeg();
+	//DrawArm();
+	DrawSwings();
+	glPopMatrix();
 	//swapping buffers and displaying
 	glutSwapBuffers();
 
@@ -719,8 +725,9 @@ void DrawSwings(void)
 				glTranslated(-1.5, 0, 0);
 				glRotatef(swingAng, 1, 0, 0);
 				DrawSwing();
-				glTranslatef(0.5, -1.8, 0);
-				DrawSwingKid(0);
+				glTranslatef(0.5, -1.85, 0);
+				glScalef(0.9, 0.9, 0.9);
+				DrawSwingKid(0); // 
 			glPopMatrix();
 
 			// Draw Swing Right
@@ -728,8 +735,9 @@ void DrawSwings(void)
 				glTranslated(0.5, 0, 0);
 				glRotatef(-swingAng, 1, 0, 0);
 				DrawSwing();
-				glTranslatef(0.5, -1.8, 0);
-				DrawSwingKid(1);
+				glTranslatef(0.5, -1.85, 0);
+				glScalef(0.9, 0.9, 0.9);
+				DrawSwingKid(1);//
 			glPopMatrix();
 
 		glPopMatrix();
@@ -850,12 +858,13 @@ void DrawBody(float radius, float height,int sex)
 
 void Drawlimb(float radius, float height)
 {
+	//draw pill shaped limb in the pos Z direction
 	glPushMatrix();
 		GLUquadricObj* quadratic;
 		quadratic = gluNewQuadric();
 		gluCylinder(quadratic, radius, radius, height, 32, 32);
+		glutSolidSphere(radius, 10, 10);
 		glPushMatrix();
-			glutSolidSphere(0.13, 10, 10);
 			glTranslatef(0, 0, height);
 			glutSolidSphere(radius, 10, 10);
 		glPopMatrix();
@@ -864,70 +873,78 @@ void Drawlimb(float radius, float height)
 
 void DrawSwingKid(int sex)
 {
+	vec3 legPos = {0.14, -0.1, 0.0};
+	vec3 armPos = { 0.23, 0.5, 0.0 };
+
 	glPushMatrix();
 		// Body
 		glTranslatef(0.0, -0.05, -0.18);
 		DrawBody(0.25, 0.6, sex);
-
 		// Head
 		DrawHead();
 
-		// Left-leg
-		DrawLimbs(0.15 , -0.101, 0.0, 90.0, 1.0, 0.0, 0.0, 0.5, 1, 0);
-
-		// Right-leg
-		DrawLimbs(-0.15, -0.101, 0.0, 90.0, 1.0, 0.0, 0.0, 0.5, 1, 0);
-
-		// Right-arm
 		glPushMatrix();
-		glRotatef(90, 0.0, 1.0, 0.0);
-		DrawLimbs(-0.05 , 0.5, 0.0, 90.0, 0.5, 1.0, 0.0, 0.4, 0.0, 1);
-		glPopMatrix();	
+			// Left-leg
+			glTranslatef(legPos.x, legPos.y, legPos.z);
+			DrawLeg(sex);
+		glPopMatrix();
+
+		glPushMatrix();
+			// Right-leg
+			glTranslatef(-legPos.x, legPos.y, legPos.z);
+			DrawLeg(sex);
+		glPopMatrix();
 
 		// Left-arm
 		glPushMatrix();
-		glRotatef(-90, 0.0, 1.0, 0.0);
-		DrawLimbs(0.05, 0.5, 0.0, 90.0, 1, 0.0, 0.0, 0.4, 0.0, 0);
-		glPopMatrix();
+			glTranslatef(armPos.x, armPos.y, armPos.z);
+			glRotatef(80.0, 1.0, 0.85, 0.0);
+			DrawArm();
+		glPopMatrix();	
 
-	glPopMatrix();
-
-}
-
-void DrawLimbs(float limbDirBodyX, float limbDirBodyY, float limbDirBodyZ,
-				float jointAng, 
-					float limbDirLimbX, float limbDirLimbY, float limbDirLimbZ,
-						float bodyLimbLength, int isLeg)
-{
-	glPushMatrix();
-		glTranslatef(limbDirBodyX, limbDirBodyY, limbDirBodyZ);
-		Drawlimb(0.09, bodyLimbLength);
-		//DOWN LEFT legs
+		// Right-arm
 		glPushMatrix();
-				glTranslatef(0.0, -0.5, 0.5);
-			if (isLeg) {
-				glRotatef(-jointAng, limbDirLimbX, limbDirLimbY, limbDirLimbZ);
-				Drawlimb(0.09, bodyLimbLength);
-				glRotatef(90, 1.0, 0.0, 0.0);
-				Drawlimb(0.12, 0.2); 
-			}
-			else {
-				drawHand();
-			}
+			glTranslatef(-armPos.x, armPos.y, armPos.z);
+			glRotatef(80.0, 1.0, -0.85, 0.0);
+			DrawArm();
 		glPopMatrix();
 	glPopMatrix();
+
 }
 
-
-void drawHand(void)
+void DrawLeg(int sex)
 {
+	float thighLength = 0.5;
+	float shockLength = 0.55;
+	float footLength = 0.2;
 	glPushMatrix();
-		glTranslatef(0.0, 0.5, 0.0);
-		glutSolidSphere(0.1, 10, 10);
+		//theigh
+		Drawlimb(0.12, thighLength);
+		glTranslatef(0 ,0, thighLength);
+		//shock
+		sex == 1 ? glRotatef(jointAngLeg, 1.0, 0.0, 0.0) : glRotatef(90 - jointAngLeg, 1.0, 0.0, 0.0);
+		Drawlimb(0.1, shockLength);
+		glTranslatef(0.0, 0.0,  shockLength);
+		glRotatef(-90, 1.0, 0.0, 0.0);
+		//foot
+		Drawlimb(0.12, footLength);
+
+	
 	glPopMatrix();
 }
 
-//VerticalCylinder(0.1, 0.5);
+void DrawArm(void)
+{
+	float armLenght = 0.5;
+
+	glPushMatrix();
+		glutSolidSphere(0.13, 10, 10); // Shoulder
+		Drawlimb(0.1, armLenght);
+		glTranslatef(0.0, 0.0, armLenght);
+		glutSolidSphere(0.12, 10, 10); // Palm
+	glPopMatrix();
+}
+
 void update(int value) 
 {
 	rotationAngle += 2.0f; // Adjust rotation speed as needed
@@ -936,9 +953,26 @@ void update(int value)
 	float length = 0.8;
 	float omega = sqrt(9.81 / length);
 	float time_period = 2 * PI * sqrt(length / 9.81);
+	int isForward = 1;
 
 	time += 16 * 0.001f;
 	swingAng = SWING_MAX_ANG * cos(omega * time);
+
+	//jointAngLeg = cos(omega * time) < 0 ? 0 : 90;
+
+	//------------------------
+		if (isForward) {
+			jointAngLeg++;
+		}
+		else {
+			jointAngLeg--;
+		}
+
+		isForward = jointAngLeg > 0.9 ? 0 : 1;
+		isForward = jointAngLeg < -0.9 ? 1 : 0;
+
+	//------------------------
+	printf("angle = %f \n", cos(omega * time));
 
 
 	if (time >= time_period) {
@@ -948,8 +982,6 @@ void update(int value)
 	glutPostRedisplay();
 	glutTimerFunc(16, update, 0); // ~60 FPS
 }
-
-
 
 /*
 	Colors:
