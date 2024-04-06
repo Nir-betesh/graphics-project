@@ -35,6 +35,14 @@ void DrawStreetLight(void);
 void DrawSwings(void);
 float DrawChains(int length);
 void DrawSwing(void);
+void DrawSwingKid(int sex);
+void DrawHead(void);
+void drawHand(void);
+void DrawLimbs(float limbDirBodyX, float limbDirBodyY, float limbDirBodyZ,
+	float jointAng,
+	float limbDirLimbX, float limbDirLimbY, float limbDirLimbZ,
+	float bodyLimbLength, int isLeg);
+
 
 float time = 0;
 int isBanchExist = 0, dirSwingA = 1;
@@ -48,6 +56,11 @@ vec3 cameraPos = { 0, 3, 5 };
 vec3 cameraForward = { 0, 0, -1 };
 vec3 cameraForwardXZ = { 0, 0, -1 };
 vec3 cameraRight = { 1, 0, 0 };
+float xBP, yBP, zBP;
+float xLB, yLB, zLB;
+int isLeg = 1;
+float jointAng;
+float jointAngLeftLeg = 90, jointAngRightLeg = 90, jointAngLeftArm = 70, jointAngRightArm = 70;
 
 // Global variables
 float rotationAngle = 0.0f;
@@ -55,6 +68,9 @@ float rotationAngle = 0.0f;
 GLuint ground;
 GLuint metal;
 GLuint lamp;
+GLuint boyFace;
+
+
 
 
 int main(int argc, char **argv)
@@ -76,12 +92,18 @@ int main(int argc, char **argv)
 	glEnable(GL_NORMALIZE);
 	glEnable(GL_LIGHT1);
 
+	boyFace = load_texture("boyFace.bmp", 1);
+
+
+
+
 	//registering callbacks
 	glutDisplayFunc(drawingCB);
 	glutReshapeFunc(reshapeCB);
 	glutKeyboardFunc(keyboardCB);
 	glutSpecialFunc(keyboardSpecialCB);
 
+	boyFace = load_texture("boyFace.bmp", 1);
 	ground = load_texture("ground.bmp", 1);
 	//metal = load_texture("metal.bmp", 1);
 	lamp = load_texture("lamp.bmp", 1);
@@ -94,6 +116,7 @@ int main(int argc, char **argv)
 
 	//starting main loop
 	glutMainLoop();
+
 }
 
 GLuint load_texture(char *name, int flip)
@@ -209,6 +232,7 @@ void drawingCB(void)
 		drawGround();
 	}
 
+	
 	/*
 	glPushMatrix();
 	glTranslated(0, 1, 0);
@@ -221,11 +245,13 @@ void drawingCB(void)
 	glTranslated(2, 0, 0);
 	DrawStreetLight();
 	glPopMatrix();
+
 	*/
 
 	glPushMatrix();
-	DrawSwings();
+		DrawSwings();
 	glPopMatrix();
+
 
 	//swapping buffers and displaying
 	glutSwapBuffers();
@@ -513,7 +539,7 @@ void TerminationErrorFunc(char *ErrorString)
 	exit(0);
 }
 
-void DrawWindSpinner()
+void DrawWindSpinner(void)
 {
 	glPushMatrix();
 	glTranslatef(0, -1.5, 0);
@@ -658,7 +684,6 @@ void DrawSwings(void)
 {
 	glPushMatrix();
 		glTranslated(0, -1, 0);
-
 		// Right pillar
 		glPushMatrix();
 			glTranslated(2, 0, 0);
@@ -691,17 +716,20 @@ void DrawSwings(void)
 				
 			// Draw Swing Left
 			glPushMatrix();
-			glTranslated(-1.5, 0, 0);
-			glRotatef(swingAng, 1, 0, 0);
-			DrawSwing();
+				glTranslated(-1.5, 0, 0);
+				glRotatef(swingAng, 1, 0, 0);
+				DrawSwing();
+				glTranslatef(0.5, -1.8, 0);
+				DrawSwingKid(0);
 			glPopMatrix();
 
 			// Draw Swing Right
 			glPushMatrix();
-			glTranslated(0.5, 0, 0);
-			glRotatef(-swingAng, 1, 0, 0);
-
-			DrawSwing();
+				glTranslated(0.5, 0, 0);
+				glRotatef(-swingAng, 1, 0, 0);
+				DrawSwing();
+				glTranslatef(0.5, -1.8, 0);
+				DrawSwingKid(1);
 			glPopMatrix();
 
 		glPopMatrix();
@@ -758,6 +786,148 @@ void DrawSwing(void)
 
 }
 
+void DrawHead()
+{		
+	glPushMatrix();
+		glPushMatrix();
+			glTranslatef(0.0, 0.65, 0.0);
+			glutSolidSphere(0.1, 10, 10);// neck
+			glTranslatef(0.0, 0.3, 0.0);
+			
+			/// texture of smaily
+			//glBindTexture(GL_TEXTURE_2D, boyFace);
+			//glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+			//glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+			//glEnable(GL_TEXTURE_GEN_S);
+			//glEnable(GL_TEXTURE_GEN_T);
+			glutSolidSphere(0.23, 10, 10);// head
+			//glDisable(GL_TEXTURE_GEN_S);
+			//glDisable(GL_TEXTURE_GEN_T);
+		glPopMatrix();
+
+		/*
+		glBindTexture(GL_TEXTURE_2D, metal);
+		glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_LINEAR);
+		glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_LINEAR);
+		glEnable(GL_TEXTURE_GEN_S);
+		glEnable(GL_TEXTURE_GEN_T);
+		glutSolidSphere(0.23, 10, 10);// head
+		glDisable(GL_TEXTURE_GEN_S);
+		glDisable(GL_TEXTURE_GEN_T);
+		*/
+
+		glPushMatrix();
+
+			glTranslatef(0.0, 0.6, 0.0);
+			GLUquadricObj* quadratic;
+			quadratic = gluNewQuadric();
+			gluQuadricTexture(quadratic, GL_TRUE);
+			glRotatef(-90.0f, 1.0f, 0.0f, 0.0f);
+			gluCylinder(quadratic, 0.25, 0.05, 0.1, 32, 32);
+		glPopMatrix();
+	glPopMatrix();
+}
+
+void DrawBody(float radius, float height,int sex)
+{
+
+	if (sex) {
+		VerticalCylinder(radius, height);
+		glutSolidSphere(0.25, 10, 10);
+	}
+	else {
+		glPushMatrix();
+			GLUquadricObj* quadratic;
+			quadratic = gluNewQuadric();
+			gluQuadricTexture(quadratic, GL_TRUE);
+			glRotatef(-90.0f, 1.0f, 0.0f, 0.0f);
+			glTranslatef(0.0, 0.0, -0.2);
+			gluCylinder(quadratic, radius + 0.2, radius , height + 0.2  , 32, 32);
+		glPopMatrix();
+	}
+
+}
+
+void Drawlimb(float radius, float height)
+{
+	glPushMatrix();
+		GLUquadricObj* quadratic;
+		quadratic = gluNewQuadric();
+		gluCylinder(quadratic, radius, radius, height, 32, 32);
+		glPushMatrix();
+			glutSolidSphere(0.13, 10, 10);
+			glTranslatef(0, 0, height);
+			glutSolidSphere(radius, 10, 10);
+		glPopMatrix();
+	glPopMatrix();
+}
+
+void DrawSwingKid(int sex)
+{
+	glPushMatrix();
+		// Body
+		glTranslatef(0.0, -0.05, -0.18);
+		DrawBody(0.25, 0.6, sex);
+
+		// Head
+		DrawHead();
+
+		// Left-leg
+		DrawLimbs(0.15 , -0.101, 0.0, 90.0, 1.0, 0.0, 0.0, 0.5, 1, 0);
+
+		// Right-leg
+		DrawLimbs(-0.15, -0.101, 0.0, 90.0, 1.0, 0.0, 0.0, 0.5, 1, 0);
+
+		// Right-arm
+		glPushMatrix();
+		glRotatef(90, 0.0, 1.0, 0.0);
+		DrawLimbs(-0.05 , 0.5, 0.0, 90.0, 0.5, 1.0, 0.0, 0.4, 0.0, 1);
+		glPopMatrix();	
+
+		// Left-arm
+		glPushMatrix();
+		glRotatef(-90, 0.0, 1.0, 0.0);
+		DrawLimbs(0.05, 0.5, 0.0, 90.0, 1, 0.0, 0.0, 0.4, 0.0, 0);
+		glPopMatrix();
+
+	glPopMatrix();
+
+}
+
+void DrawLimbs(float limbDirBodyX, float limbDirBodyY, float limbDirBodyZ,
+				float jointAng, 
+					float limbDirLimbX, float limbDirLimbY, float limbDirLimbZ,
+						float bodyLimbLength, int isLeg)
+{
+	glPushMatrix();
+		glTranslatef(limbDirBodyX, limbDirBodyY, limbDirBodyZ);
+		Drawlimb(0.09, bodyLimbLength);
+		//DOWN LEFT legs
+		glPushMatrix();
+				glTranslatef(0.0, -0.5, 0.5);
+			if (isLeg) {
+				glRotatef(-jointAng, limbDirLimbX, limbDirLimbY, limbDirLimbZ);
+				Drawlimb(0.09, bodyLimbLength);
+				glRotatef(90, 1.0, 0.0, 0.0);
+				Drawlimb(0.12, 0.2); 
+			}
+			else {
+				drawHand();
+			}
+		glPopMatrix();
+	glPopMatrix();
+}
+
+
+void drawHand(void)
+{
+	glPushMatrix();
+		glTranslatef(0.0, 0.5, 0.0);
+		glutSolidSphere(0.1, 10, 10);
+	glPopMatrix();
+}
+
+//VerticalCylinder(0.1, 0.5);
 void update(int value) 
 {
 	rotationAngle += 2.0f; // Adjust rotation speed as needed
@@ -775,19 +945,11 @@ void update(int value)
 		time = 0;
 	}
 
-
-
-
 	glutPostRedisplay();
 	glutTimerFunc(16, update, 0); // ~60 FPS
 }
 
-void plotPixel(int x, int y)
-{
-	glBegin(GL_POINTS);
-	glVertex2i(x, y);
-	glEnd();
-}
+
 
 /*
 	Colors:
