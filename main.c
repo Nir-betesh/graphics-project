@@ -427,28 +427,58 @@ void drawingCB(void)
 	drawBouncingBall();
 	/*
 	float boundery = 10;
-
+	
 	DrawFence((vec3) { -boundery, 0, boundery }, (vec3) { -boundery, 0, -boundery }, 2);
 	DrawFence((vec3) { -boundery, 0, -boundery },  (vec3) { boundery, 0, -boundery }, 2);
 	DrawFence((vec3) { boundery, 0, -boundery }, (vec3) { boundery, 0, boundery }, 2);
-
+	DrawFence((vec3) { -boundery, 0, boundery }, (vec3) { -2, 0, boundery }, 2);
+	DrawFence((vec3) { 4.5, 0, boundery }, (vec3) { boundery + 0.45, 0, boundery }, 2);
+	
 	glPushMatrix();
-	glTranslated(0, 1, 0);
-
-	glPushMatrix();
-	glRotated(-90, 0, 1, 0);
-	DrawWindSpinner();
-	glPopMatrix();
-
-	glTranslated(2, 0, 0);
-	DrawStreetLight();
+	glTranslatef(boundery, 0, boundery);
+	DrawFlagPole();
 	glPopMatrix();
 
 	glPushMatrix();
-		DrawSwings();
+	glTranslatef(-boundery, 0, boundery);
+	DrawFlagPole();
 	glPopMatrix();
 
-	//DrawFountain();
+	glPushMatrix();
+	glTranslatef(3, 0, boundery);
+	DrawSign();
+	glPopMatrix();
+	
+	glPushMatrix();
+	glTranslatef(boundery - 0.5, 0, 0);
+	glRotatef(-90, 0, 1, 0);
+	//DrawStreetLight();
+	glPopMatrix();
+	
+	glPushMatrix();
+	glTranslatef(-boundery + 0.5, 1, 0);
+	//DrawWindSpinner();
+	glPopMatrix();
+
+
+	glPushMatrix();
+	glTranslatef(0, 1, -boundery + 3);
+	//DrawSwings();
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslatef(-boundery + 3, 1, -boundery + 3);
+	glRotatef(45, 0, 1, 0);
+	drawBouncingBall();
+	glPopMatrix();
+
+
+	glPushMatrix();
+	glTranslatef(boundery - 4.5, 1, -boundery + 4.5);
+	drawSolarSystem();
+	glPopMatrix();
+
+
 	DrawFountain();
 	*/
 
@@ -585,6 +615,9 @@ void DrawFence(vec3 fromPoint, vec3 toPoint, float poleHeight)
 	glEnable(GL_TEXTURE_GEN_T);
 	for (i = 0; i < n_poles; i++) {
 		VerticalCylinder(poleRadius, poleHeight);
+		glTranslatef(0, poleHeight, 0);
+		glutSolidSphere(poleRadius, 10, 10);
+		glTranslatef(0, -poleHeight, 0);
 		glTranslated(scaled_direction.x, scaled_direction.y, scaled_direction.z);
 	}
 	glDisable(GL_TEXTURE_GEN_S);
@@ -599,7 +632,7 @@ void DrawFlagPole(void)
 	float w = 2;
 	float h = w * 2 / 3;
 
-	glPushMatrix();
+	/* 1 in */ glPushMatrix();
 	glBindTexture(GL_TEXTURE_2D, wood);
 	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
 	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
@@ -621,10 +654,9 @@ void DrawFlagPole(void)
 	glTexCoord2f(0, 1); glVertex3f(-w, -droop, 0);
 	glTexCoord2f(0, 0); glVertex3f(-w, -droop-h, 0);
 	glTexCoord2f(1, 0); glVertex3f(0, -h, 0);
-
 	glEnd();
 
-	glPopMatrix();
+	/* 1 out */ glPopMatrix();
 }
 
 void DrawSign(void)
@@ -647,6 +679,7 @@ void DrawSign(void)
 	glEnd();
 	glDisable(GL_TEXTURE_GEN_S);
 	glDisable(GL_TEXTURE_GEN_T);
+
 
 	glBindTexture(GL_TEXTURE_2D, wood2);
 	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
@@ -691,30 +724,55 @@ void DrawSign(void)
 	glDisable(GL_TEXTURE_GEN_T);
 
 
+	//wood posts texture
 	glBindTexture(GL_TEXTURE_2D, wood);
+	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+	glEnable(GL_TEXTURE_GEN_S);
+	glEnable(GL_TEXTURE_GEN_T);
 
-	glPushMatrix();
+	// left-side post
+	/* 1 in */ glPushMatrix();
 	glTranslatef(- (sign_width/2) - cylinder_radius, 0, 0);
 	VerticalCylinder(cylinder_radius, cylinder_height + sign_height);
-	glPopMatrix();
-
-	glPushMatrix();
+	glTranslatef(0, (cylinder_height + sign_height), 0);
+	glutSolidSphere(cylinder_radius, 20, 20);
+	glTranslatef(0, -(cylinder_height + sign_height), 0);
+	/* 1 out */ glPopMatrix();
+	
+	// right-side post
+	/* 2 in */ glPushMatrix();
 	glTranslatef(sign_width/2 + cylinder_radius, 0, 0);
 	VerticalCylinder(cylinder_radius, cylinder_height + sign_height);
-	glPopMatrix();
+	glTranslatef(0, (cylinder_height + sign_height), 0);
+	glutSolidSphere(cylinder_radius, 20, 20);
+	glTranslatef(0, -(cylinder_height + sign_height), 0);
+	/* 2 out */ glPopMatrix();
 
-	glPushMatrix();
-	glTranslatef(0, 0, -0.05f - cylinder_radius*2);
+	//middle thick post
+	/* 3 in */ glPushMatrix();
+	glTranslatef(0, 0, -0.05f - cylinder_radius * 2);
 	VerticalCylinder(cylinder_radius, cylinder_height + sign_height + 0.7);
+	glTranslatef(0 , (cylinder_height + sign_height + 0.7), 0);
+	glutSolidSphere(cylinder_radius, 20, 20);
+	glTranslatef(0, -(cylinder_height + sign_height + 0.7f), 0);
 	glTranslatef(0, cylinder_height + sign_height + 0.5, -cylinder_radius);
+	
+	//elbow stick
 	glRotatef(90.0f, 1.0f, 0.0f, 0.0f);
-	VerticalCylinder(cylinder_radius*0.6, 1.5);
+	VerticalCylinder(cylinder_radius * 0.6, 1.5);
 	glRotatef(-90.0f, 1.0f, 0.0f, 0.0f);
-
+	
+	//bolb house
 	glTranslated(0, 0.05, 1.54);
+	glutSolidSphere(cylinder_radius * 0.6, 20, 20);
 	glRotatef(210.0f, 1.0f, 0.0f, 0.0f);
 	VerticalCylinder(cylinder_radius * 0.6, 0.3);
 	glTranslated(0, 0.3, 0);
+	
+	glDisable(GL_TEXTURE_GEN_S);
+	glDisable(GL_TEXTURE_GEN_T);
+
 
 	glBindTexture(GL_TEXTURE_2D, lamp);
 	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
@@ -725,8 +783,7 @@ void DrawSign(void)
 	glDisable(GL_TEXTURE_GEN_S);
 	glDisable(GL_TEXTURE_GEN_T);
 
-	glPopMatrix();
-
+	/* 3 out */ glPopMatrix();
 }
 
 void VerticalCylinder(float radius, float height)
