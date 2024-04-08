@@ -64,13 +64,15 @@ void DrawSwingKid(int gender);
 void DrawHead(void);
 void DrawArm(void);
 void DrawLeg(int gender);
+void DrawCarousel(void);
+
 
 float time = 0;
 int isBanchExist = 0, dirSwingA = 1;
 float swingAng = SWING_MAX_ANG;
 
 int FOVy = 60;
-int camera_mode = CAMERA_MODEL;
+int camera_mode = CAMERA_FREE;
 int lighting = 1, head_light = 1;
 float angleX = 0, angleY = 0, radius = 5;
 vec3 cameraPos = { 0, 3, 5 };
@@ -424,7 +426,10 @@ void drawingCB(void)
 	}
 	//glTranslatef(0, 2, 0);
 	//drawSolarSystem();
-	drawBouncingBall();
+	//drawBouncingBall();
+
+	DrawCarousel();
+
 	/*
 	float boundery = 10;
 	
@@ -488,6 +493,69 @@ void drawingCB(void)
 	//check for errors
 	er = glGetError();  //get errors. 0 for no error, find the error codes in: https://www.opengl.org/wiki/OpenGL_Error
 	if (er) printf("error: %d\n", er);
+}
+
+void DrawCarousel(void) {
+	GLfloat matt_yellow[] = { 187/255.0, 162/255.0, 60/255.0, 0.55 };
+	GLfloat matt_blue[] = { 27 / 255.0, 80 / 255.0, 160 / 255.0, 0.55 };
+	GLfloat mat_shininess128[] = { 128 };
+
+
+	glPushMatrix();
+	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, matt_yellow);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, matt_yellow);
+	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess128);
+
+	glRotatef(rotationAngle, 0, 1, 0);
+		glTranslatef(0, 0.3, 0); // initial height
+		glPushMatrix();
+			glRotatef(-90, 1, 0, 0);
+			glutSolidTorus(0.1, 2, 30, 60); // base torus
+			glTranslatef(0, 0, 1.4);
+			glutSolidTorus(0.1, 2, 30, 60); // heigher torus
+		glPopMatrix();
+		glPushMatrix();
+			glScalef(1, 0.05, 1);
+			glutSolidSphere(2.05, 20, 20); // base plate
+		glPopMatrix();
+
+		for (int i = 0; i < 3; i++) {
+			glPushMatrix();
+				glRotatef(120 * i, 0, 1, 0);
+				glTranslatef(2, 0, 0);
+				VerticalCylinder(0.1, 1.4); // support columns
+			glPopMatrix();
+		}
+
+		glTranslatef(0, 0.8, 0);
+		for (int i = -25; i < 265; i++) {
+			glPushMatrix();
+			glRotatef(i, 0, 1, 0);
+			glTranslatef(1.7, 0, 0);
+			glScalef(1, 0.2, 1);
+			glutSolidSphere(0.25, 20, 20); // seat plate
+			glPopMatrix();
+		}
+		glTranslatef(0, -0.8, 0);
+
+
+		glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, matt_blue);
+		glMaterialfv(GL_FRONT, GL_SPECULAR, matt_blue);
+		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess128);
+
+		VerticalCylinder(0.1, 1.3); // centre cylinder
+		glPushMatrix();
+			glTranslatef(0, 1.3, 0);
+			glRotatef(90, 1, 0, 0);
+			glutSolidTorus(0.05, 0.25, 20, 20);
+			glRotatef(-90, 1, 0, 0);
+			glScalef(1, 0.05, 1);
+			glutSolidSphere(0.25, 20, 20); // centre plate ////
+		glPopMatrix();
+
+
+	//DrawSwingKid(1);
+	glPopMatrix();
 }
 
 void DrawFountain(void)
@@ -1133,6 +1201,7 @@ float lerp(float a, float b, float t)
 {
 	return a * (1 - t) + b * t;
 }
+
 float invLerp(float a, float b, float c)
 {
 	return (c - a) / (b - a);
