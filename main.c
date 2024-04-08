@@ -65,6 +65,15 @@ void DrawArm(void);
 void Drawlimb(float radius, float height);
 void DrawLeg(int gender);
 void DrawBody(float radius, float height, int gender);
+void DrawSquare(float xLen, float yLen, float zLen);
+void DrawCoOpSwing(void);
+void DrawCoOpSwingKid(int gender);
+
+void GoldColor(void);
+void PolishedSilverColor(void);
+void RubyColor(void);
+void EmeraldColor(void);
+
 
 float time = 0;
 int isBanchExist = 0, dirSwingA = 1;
@@ -81,10 +90,12 @@ vec3 cameraRight = { 1, 0, 0 };
 
 float jointAngLeg = 30;
 float jointAng;
+float coOpSwingAng;
 float ballPosition = 0;
 float dxBall = BALL_SPEED;
 float earthAngle = 0, earthSelf = 0, sunSelf = 0, moonSelf = 0, moonAngle = 0;
 float rotationAngle = 0.0f;
+int isUp = 1;
 
 int timeOfDay = TIME_DAY;
 int transPhase = PHASE_END;
@@ -453,10 +464,15 @@ void drawingCB(void)
 	//DrawFountain();
 	//swapping buffers and displaying
 	//DrawStreetLight();
-	DrawSwings();
-	glutSwapBuffers();
+	//DrawSquare(0.5, 0.5, 2, wood);
+	//DrawSwings();
+	//DrawStreetLight();
 	//DrawWindSpinner();
+	
+	glTranslated(0, 2, 0);
+	DrawCoOpSwing();
 
+	glutSwapBuffers();
 	//check for errors
 	er = glGetError();  //get errors. 0 for no error, find the error codes in: https://www.opengl.org/wiki/OpenGL_Error
 	if (er) printf("error: %d\n", er);
@@ -1201,59 +1217,55 @@ void DrawWindSpinner(void)
 
 void DrawStreetLight(void)
 {
-	// Polished Silver Color
-	GLfloat mat_ambient[] = { 0.23125, 0.23125, 0.23125, 1.0 };
-	GLfloat mat_diffuse[] = { 0.2775, 0.2775, 0.2775, 1.0 };
-	GLfloat mat_specular[] = { 0.773911, 0.773911, 0.773911, 1.0 };
-	GLfloat mat_shininess[] = { 51.22 };
+
 	GLUquadric* quadric;
+	quadric = gluNewQuadric();
+
 	// lamp
-	GLfloat light_1_position[] = { 0, 3.68, 0.9, 1 };
-	GLfloat light_1_specular[] = { 0.1, 0.1, 0.1, 1 };
-	GLfloat light_1_diffuse[] = { 0.7, 0.7, 0.7, 1 };
-	GLfloat light_1_ambient[] = { 0.3, 0.3, 0.3, 1 };
+	GLfloat light_1_specular[] = { 100.0, 100.0, 100.0, 1.0 };
+	GLfloat light_1_diffuse[] = { 100.0, 100.0, 100.0, 1.0 };
+	GLfloat light_1_ambient[] = { 100.0, 100.0, 100.0, 1.0 };
+	GLfloat light_1_position[] = { 0.0, 4.0, 0.9, 1.0 };
 	GLfloat light_1_spotLight[] = { 0, -1, 0, 1 };
 	GLfloat light_1_spotCutOff[] = { 25 };
 
-	glPushMatrix();
-	glTranslatef(0, -1.7, 0);
-	quadric = gluNewQuadric(); 
-
-	glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
-	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
-
-	VerticalCylinder(0.1, 4.0);
-	glTranslated(0, 4, 0);
-	glutSolidSphere(0.1, 20, 20);
-	gluCylinder(quadric, 0.1, 0.1, 1, 32, 32);
-	glTranslatef(0, 0, 1);
-	glutSolidSphere(0.1, 20, 20);
-	glTranslatef(0, -0.32, -0.1);
-
-	glPushMatrix();
-	glRotated(-90.0, 1, 0, 0);
-	glutSolidCone(0.2, 0.3, 10, 10);
-	glPopMatrix();
-	
-
-	glLightfv(LIGHT_STREETLAMP, GL_POSITION, light_1_position);
-	glLightfv(LIGHT_STREETLAMP, GL_SPOT_DIRECTION, light_1_spotLight);
-	glLightfv(LIGHT_STREETLAMP, GL_SPOT_CUTOFF, light_1_spotCutOff);
 	glLightfv(LIGHT_STREETLAMP, GL_DIFFUSE, light_1_diffuse);
 	glLightfv(LIGHT_STREETLAMP, GL_SPECULAR, light_1_specular);
 	glLightfv(LIGHT_STREETLAMP, GL_AMBIENT, light_1_ambient);
+	glLightfv(LIGHT_STREETLAMP, GL_POSITION, light_1_position);
+	glLightfv(LIGHT_STREETLAMP, GL_SPOT_DIRECTION, light_1_spotLight);
+	glLightfv(LIGHT_STREETLAMP, GL_SPOT_CUTOFF, light_1_spotCutOff);
 
-	glBindTexture(GL_TEXTURE_2D, lamp);
-	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
-	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
-	glEnable(GL_TEXTURE_GEN_S);
-	glEnable(GL_TEXTURE_GEN_T);
-	glutSolidSphere(0.12, 20, 20);
-	glDisable(GL_TEXTURE_GEN_S);
-	glDisable(GL_TEXTURE_GEN_T);
-	gluDeleteQuadric(quadric);
+	glPushMatrix();
+
+		glBindTexture(GL_TEXTURE_2D, metal);
+		glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+		glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+		glEnable(GL_TEXTURE_GEN_S);
+		glEnable(GL_TEXTURE_GEN_T);
+
+		VerticalCylinder(0.1, 4.0);
+		glTranslated(0, 4, 0);
+		glutSolidSphere(0.1, 20, 20);
+		gluCylinder(quadric, 0.1, 0.1, 1, 32, 32);
+		glTranslatef(0, 0, 1);
+		glutSolidSphere(0.1, 20, 20);
+		glTranslatef(0, -0.32, -0.1);
+
+		glPushMatrix();
+		glRotated(-90.0, 1, 0, 0);
+		glutSolidCone(0.2, 0.3, 10, 10);
+		glPopMatrix();
+
+
+		glBindTexture(GL_TEXTURE_2D, lamp);
+		glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+		glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+		glutSolidSphere(0.12, 20, 20);
+
+		glDisable(GL_TEXTURE_GEN_S);
+		glDisable(GL_TEXTURE_GEN_T);
+		gluDeleteQuadric(quadric);
 
 	glPopMatrix(); 
 }
@@ -1263,6 +1275,13 @@ void DrawSwings(void)
 	GLUquadric* quadric;
 	glPushMatrix();
 		glTranslated(0, -1, 0);
+
+		glBindTexture(GL_TEXTURE_2D, wood);
+		glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+		glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+		glEnable(GL_TEXTURE_GEN_S);
+		glEnable(GL_TEXTURE_GEN_T);
+	
 		// Right pillar
 		glPushMatrix();
 			glTranslated(2, 0, 0);
@@ -1289,6 +1308,9 @@ void DrawSwings(void)
 			gluDeleteQuadric(quadric);
 		glPopMatrix();
 
+		glDisable(GL_TEXTURE_GEN_S);
+		glDisable(GL_TEXTURE_GEN_T);
+
 		glPushMatrix();
 
 			glTranslated(0, 2.83, 0);
@@ -1300,7 +1322,7 @@ void DrawSwings(void)
 				DrawSwing();
 				glTranslatef(0.5, -1.85, 0);
 				glScalef(0.9, 0.9, 0.9);
-				DrawSwingKid(0); 
+				DrawSwingKid(0); // Draw girl on swing
 			glPopMatrix();
 
 			// Draw Swing Right
@@ -1310,7 +1332,7 @@ void DrawSwings(void)
 				DrawSwing();
 				glTranslatef(0.5, -1.85, 0);
 				glScalef(0.9, 0.9, 0.9);
-				DrawSwingKid(1);
+				DrawSwingKid(1); // Draw boy on swing
 			glPopMatrix();
 
 		glPopMatrix();
@@ -1327,17 +1349,18 @@ void DrawSwingKid(int gender)
 		// Body
 		glTranslatef(0.0, -0.05, -0.18);
 		DrawBody(0.25, 0.6, gender);
+
 		// Head
 		DrawHead();
 
+		// Left-leg
 		glPushMatrix();
-			// Left-leg
 			glTranslatef(legPos.x, legPos.y, legPos.z);
 			DrawLeg(gender);
 		glPopMatrix();
-
+		
+		// Right-leg
 		glPushMatrix();
-			// Right-leg
 			glTranslatef(-legPos.x, legPos.y, legPos.z);
 			DrawLeg(gender);
 		glPopMatrix();
@@ -1355,8 +1378,8 @@ void DrawSwingKid(int gender)
 			glRotatef(80.0, 1.0, -0.85, 0.0);
 			DrawArm();
 		glPopMatrix();
-	glPopMatrix();
 
+	glPopMatrix();
 }
 
 void drawBlade(void)
@@ -1413,24 +1436,30 @@ void DrawSwing(void)
 	float y;
 
 	glPushMatrix();
+
 		// Chain Left
+		glBindTexture(GL_TEXTURE_2D, metal);
+		glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+		glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+		glEnable(GL_TEXTURE_GEN_S);
+		glEnable(GL_TEXTURE_GEN_T);
 		y = DrawChains(30);
 
 		glBindTexture(GL_TEXTURE_2D, wood);
-		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+
 		// Draw Banch
 		glPushMatrix();
-		glTranslatef(0, y, 0);
-		glScalef(12.0, 1.0, 5.0);
-		glTranslatef(0.042, 0.0, -0.005);
-		glutSolidCube(0.1);
+			glTranslatef(-0.1, y, -0.27);
+			DrawSquare(1.2, 0.1, 0.5); 
 		glPopMatrix();
-		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-		glBindTexture(GL_TEXTURE_2D, 0);
 
+		glBindTexture(GL_TEXTURE_2D, metal);
 		// Chain Right
 		glTranslated(1, 0, 0);
 		DrawChains(30);
+		glDisable(GL_TEXTURE_GEN_S);
+		glDisable(GL_TEXTURE_GEN_T);
+
 	glPopMatrix();
 
 
@@ -1439,36 +1468,25 @@ void DrawSwing(void)
 void DrawHead(void)
 {		
 	GLUquadric* quadric;
-
 	glPushMatrix();
 		glPushMatrix();
 			glTranslatef(0.0, 0.65, 0.0);
 			glutSolidSphere(0.1, 10, 10);// neck
 			glTranslatef(0.0, 0.3, 0.0);
-			
-			/// texture of smaily
-			//glBindTexture(GL_TEXTURE_2D, boyFace);
-			//glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
-			//glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
-			//glEnable(GL_TEXTURE_GEN_S);
-			//glEnable(GL_TEXTURE_GEN_T);
+			// texture of smaily
+			glBindTexture(GL_TEXTURE_2D, boyFace);
+			glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+			glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+			glEnable(GL_TEXTURE_GEN_S);
+			glEnable(GL_TEXTURE_GEN_T);
 			glutSolidSphere(0.23, 10, 10);// head
-			//glDisable(GL_TEXTURE_GEN_S);
-			//glDisable(GL_TEXTURE_GEN_T);
+
 		glPopMatrix();
 
-		/*
-		glBindTexture(GL_TEXTURE_2D, metal);
-		glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_LINEAR);
-		glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_LINEAR);
-		glEnable(GL_TEXTURE_GEN_S);
-		glEnable(GL_TEXTURE_GEN_T);
-		glutSolidSphere(0.23, 10, 10);// head
-		glDisable(GL_TEXTURE_GEN_S);
-		glDisable(GL_TEXTURE_GEN_T);
-		*/
-
 		glPushMatrix();
+			glBindTexture(GL_TEXTURE_2D, metal);
+			glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+			glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
 
 			glTranslatef(0.0, 0.6, 0.0);
 			quadric = gluNewQuadric();
@@ -1476,6 +1494,8 @@ void DrawHead(void)
 			glRotatef(-90.0f, 1.0f, 0.0f, 0.0f);
 			gluCylinder(quadric, 0.25, 0.05, 0.1, 32, 32);
 			gluDeleteQuadric(quadric);
+			glDisable(GL_TEXTURE_GEN_S);
+			glDisable(GL_TEXTURE_GEN_T);
 		glPopMatrix();
 	glPopMatrix();
 }
@@ -1560,30 +1580,17 @@ void update(int value)
 	rotationAngle += 2.0f; // Adjust rotation speed as needed
 	rotationAngle = wrapAngle(rotationAngle, 360.0);
 
-
 	time += 16 * 0.001f;
 	swingAng = SWING_MAX_ANG * cos(omega * time);
-
-	//jointAngLeg = cos(omega * time) < 0 ? 0 : 90;
-
-	//------------------------
 	jointAngLeg = abs(90 * cos(omega * time));
 
-	/*
-	if (isForward && jointAngLeg < 90) {
-		jointAngLeg++;
+	if (coOpSwingAng == 18 && isUp) {
+		isUp = !isUp;
 	}
-	else if (!isForward && jointAngLeg >= 90) {
-		jointAngLeg--;
+	else if (coOpSwingAng == -18 && !isUp) {
+		isUp = !isUp;
 	}
-	isForward = jointAng > 0.9 ? 0 : 1;
-	isForward = jointAng < -0.9 ? 1 : 0;
-	*/
-		//printf("is forward? = %d, angle is: %f ,other ang:%f\n", isForward, jointAngLeg, jointAng);
-
-	//------------------------
-	//printf("angle = %f \n", cos(omega * time));
-
+	isUp ? (coOpSwingAng += 0.5) : (coOpSwingAng -= 0.5);
 
 	if (time >= time_period) {
 		time = 0;
@@ -1593,53 +1600,239 @@ void update(int value)
 	glutTimerFunc(16, update, 0); // ~60 FPS
 }
 
-/*
-	Colors:
+void DrawSquare(float xLen, float yLen, float zLen)
+{
+	glPushMatrix();
 
-		// Emerald Color
-		GLfloat mat_ambient1[] = { 0.0215, 0.1745, 0.0215, 0.55 };
-		GLfloat mat_diffuse1[] = { 0.07568, 0.61424, 0.07568, 0.55 };
-		GLfloat mat_specular1[] = { 0.633, 0.727811, 0.633, 0.55 };
-		GLfloat mat_shininess1[] = { 76.8 };
-		glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient1);
-		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse1);
-		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular1);
-		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess1);
+	// Back
+	glBegin(GL_POLYGON);
+		glTexCoord2f(0, 0); glVertex3f(0, 0, 0);
+		glTexCoord2f(1, 0); glVertex3f(xLen, 0, 0);
+		glTexCoord2f(1, 1); glVertex3f(xLen, yLen, 0);
+		glTexCoord2f(0, 1); glVertex3f(0, yLen, 0);
+	glEnd();
+
+	// Front
+	glBegin(GL_POLYGON);
+	glVertex3f(0.0, 0.0, zLen);
+	glVertex3f(xLen, 0.0, zLen);
+	glVertex3f(xLen, yLen, zLen);
+	glVertex3f(0.0, yLen, zLen);
+	glEnd();
 	
+	// Right
+	glBegin(GL_POLYGON);
+	glVertex3f(xLen, 0.0, 0.0);
+	glVertex3f(xLen, yLen, 0.0);
+	glVertex3f(xLen, yLen, zLen);
+	glVertex3f(xLen, 0.0, zLen);
+	glEnd();
 
-		// Ruby Color
-		GLfloat mat_ambient2[] = { 0.1745, 0.01175, 0.01175, 0.55 };
-		GLfloat mat_diffuse2[] = { 0.61424, 0.04136, 0.04136, 0.55 };
-		GLfloat mat_specular2[] = { 0.727811, 0.626959, 0.626959, 0.55 };
-		GLfloat mat_shininess2[] = { 76.8 };
-		glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient2);
-		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse2);
-		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular2);
-		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess2);
+	// Left
+	glBegin(GL_POLYGON);
+	glVertex3f(0.0, 0.0, 0.0);
+	glVertex3f(0.0, 0.0, zLen);
+	glVertex3f(0.0, yLen, zLen);
+	glVertex3f(0.0, yLen, 0.0);
+	glEnd();
+
+	// Top
+	glBegin(GL_POLYGON);
+	glVertex3f(0.0, yLen, 0.0);
+	glVertex3f(0.0, yLen, zLen);
+	glVertex3f(xLen, yLen, zLen);
+	glVertex3f(xLen, yLen, 0.0);
+	glEnd();
+
+	// Down
+	glBegin(GL_POLYGON);
+	glVertex3f(0.0, 0.0, 0.0);
+	glVertex3f(0.0, 0.0, zLen);
+	glVertex3f(xLen, 0.0, zLen);
+	glVertex3f(xLen, 0.0, 0.0);
+	glEnd();
+
+	glPopMatrix();
+
+}
+
+void DrawCoOpSwing(void)
+{
+	GLUquadric* quadric;
+	glPushMatrix();
+		glRotatef(coOpSwingAng, 0, 0, 1);
+		DrawSquare(3.5, 0.1, 0.6); // half swing
+		glPushMatrix();
+			glRotatef(180, 0, 1, 0);
+			glScalef(1,1,-1);
+			DrawSquare(3.5, 0.1, 0.6);// half swing 2
+		glPopMatrix();
+		glPushMatrix();
+			glTranslatef(0, -0.05, -0.4);
+			quadric = gluNewQuadric();
+			gluQuadricTexture(quadric, GL_TRUE);
+			gluCylinder(quadric, 0.1, 0.1, 1.4, 32, 32);
+			gluDeleteQuadric(quadric);
+			glutSolidSphere(0.15, 10, 10);
+			glTranslatef(0.0, 0.0, 1.4);
+			glutSolidSphere(0.15, 10, 10);
+		glPopMatrix();
+
+		//bench 1
+		glPushMatrix();
+			glTranslatef(-3.5, 0, 0);
+			DrawSquare(0.1, 0.7, 0.6);
+			glTranslatef(0.9, 0.0, 0.05);
+			VerticalCylinder(0.05, 0.6);
+			glTranslatef(0.0, 0.0, 0.5);
+			VerticalCylinder(0.05, 0.6);
+			glTranslatef(0.0, 0.6, -0.55);
+			glRotatef(90.0, 1.0, 0.0, 0.0);
+			VerticalCylinder(0.07, 0.6);
+			glRotatef(-90.0, 1.0, 0.0, 0.0);
+			glutSolidSphere(0.08, 10, 10);
+			glTranslatef(0.0, 0.0, 0.6);
+			glutSolidSphere(0.08, 10, 10);
+		glPopMatrix();
+
+		//bench 2
+		glPushMatrix();
+			glTranslatef(-3.5, 0, 0);
+			glRotatef(180.0, 0.0, 1.0, 0.0);
+			glTranslatef(-7.0, 0.0, -0.6);
+			DrawSquare(0.1, 0.7, 0.6);
+			glTranslatef(0.9, 0.0, 0.05);
+			VerticalCylinder(0.05, 0.6);
+			glTranslatef(0.0, 0.0, 0.5);
+			VerticalCylinder(0.05, 0.6);
+			glTranslatef(0.0, 0.6, -0.55);
+			glRotatef(90.0, 1.0, 0.0, 0.0);
+			VerticalCylinder(0.07, 0.6);
+			glRotatef(-90.0, 1.0, 0.0, 0.0);
+			glutSolidSphere(0.08, 10, 10);
+			glTranslatef(0.0, 0.0, 0.6);
+			glutSolidSphere(0.08, 10, 10);
+		glPopMatrix();
+
+		glPushMatrix();
+			glRotatef(90.0, 0.0, 1.0, 0.0);
+			glTranslatef(-0.3, 0.35, -2.85);
+			DrawCoOpSwingKid(0); 
+			glRotatef(180, 0.0, 1.0, 0.0);
+			glTranslatef(0.0, 0.0, -5.8);
+			DrawCoOpSwingKid(1); 
+		glPopMatrix();
+
+	glPopMatrix();
 
 
-		// Gold Color
-		GLfloat mat_ambient1[] = { 0.24725, 0.2245, 0.0645, 1.0 };
-		GLfloat mat_diffuse1[] = { 0.34615, 0.3143, 0.0903, 1.0 };
-		GLfloat mat_specular1[] = { 0.628281, 0.555802, 0.366065, 1.0 };
-		GLfloat mat_shininess1[] = { 51.2 };
-		glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient1);
-		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse1);
-		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular1);
-		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess1);
+	//GoldColor();
+	// Left Stand
+	glPushMatrix();
+		glTranslatef(-0.25, -1, -0.2);
+		DrawSquare(0.5, 1.5, 0.1);
 
-		
-		// Polished Silver Color
-		GLfloat mat_ambient[] = { 0.23125, 0.23125, 0.23125, 1.0 };
-		GLfloat mat_diffuse[] = { 0.2775, 0.2775, 0.2775, 1.0 };
-		GLfloat mat_specular[] = { 0.773911, 0.773911, 0.773911, 1.0 };
-		GLfloat mat_shininess[] = { 51.22 };
-		glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
-		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
-		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
-		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+		// Right Stand
+		glTranslatef(0, 0, 0.9);
+		DrawSquare(0.5, 1.5, 0.1);
+	glPopMatrix();
 	
-*/
+}
+
+void DrawCoOpSwingKid(int gender) {
+	vec3 legPos = { 0.14, -0.1, 0.0 };
+	vec3 armPos = { 0.23, 0.5, 0.0 };
+
+	//PolishedSilverColor();
+
+	glPushMatrix();
+	// Body
+	glTranslatef(0.0, -0.05, -0.18);
+	DrawBody(0.25, 0.6, gender);
+
+	// Head
+	DrawHead();
+
+	// Left-leg
+	glPushMatrix();
+	glTranslatef(legPos.x, legPos.y, legPos.z);
+	glRotatef(30, 0.0, 1.0, 0.0);
+	DrawLeg(gender);
+	glPopMatrix();
+
+	// Right-leg
+	glPushMatrix();
+	glTranslatef(-legPos.x, legPos.y, legPos.z);
+	glRotatef(-30, 0.0, 1.0, 0.0);
+	DrawLeg(gender);
+	glPopMatrix();
+
+	// Left-arm
+	glPushMatrix();
+	glTranslatef(armPos.x, armPos.y, armPos.z);
+	glRotatef(10.0, 1.0, 0.0, 0.0);
+	DrawArm();
+	glPopMatrix();
+
+	// Right-arm
+	glPushMatrix();
+	glTranslatef(-armPos.x, armPos.y, armPos.z);
+	glRotatef(10.0, 1.0, 0.0, 0.0);
+	DrawArm();
+	glPopMatrix();
+
+	glPopMatrix();
+}
+
+void GoldColor(void){
+	// Gold Color
+	GLfloat mat_ambient1[] = { 0.24725, 0.2245, 0.0645, 1.0 };
+	GLfloat mat_diffuse1[] = { 0.34615, 0.3143, 0.0903, 1.0 };
+	GLfloat mat_specular1[] = { 0.628281, 0.555802, 0.366065, 1.0 };
+	GLfloat mat_shininess1[] = { 51.2 };
+	glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient1);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse1);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular1);
+	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess1);
+}
+
+void PolishedSilverColor(void){
+	// Polished Silver Color
+	GLfloat mat_ambient[] = { 0.23125, 0.23125, 0.23125, 1.0 };
+	GLfloat mat_diffuse[] = { 0.2775, 0.2775, 0.2775, 1.0 };
+	GLfloat mat_specular[] = { 0.773911, 0.773911, 0.773911, 1.0 };
+	GLfloat mat_shininess[] = { 51.22 };
+	glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+}
+
+void RubyColor(void)
+{
+	// Ruby Color
+	GLfloat mat_ambient2[] = { 0.1745, 0.01175, 0.01175, 0.55 };
+	GLfloat mat_diffuse2[] = { 0.61424, 0.04136, 0.04136, 0.55 };
+	GLfloat mat_specular2[] = { 0.727811, 0.626959, 0.626959, 0.55 };
+	GLfloat mat_shininess2[] = { 76.8 };
+	glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient2);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse2);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular2);
+	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess2);
+}
+
+void EmeraldColor(void)
+{
+	// Emerald Color
+	GLfloat mat_ambient1[] = { 0.0215, 0.1745, 0.0215, 0.55 };
+	GLfloat mat_diffuse1[] = { 0.07568, 0.61424, 0.07568, 0.55 };
+	GLfloat mat_specular1[] = { 0.633, 0.727811, 0.633, 0.55 };
+	GLfloat mat_shininess1[] = { 76.8 };
+	glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient1);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse1);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular1);
+	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess1);
+}
 
 /*
 	// Light Settings
