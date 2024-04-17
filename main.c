@@ -21,7 +21,11 @@
 #define LIGHT_HEAD GL_LIGHT0
 #define LIGHT_BALL GL_LIGHT1
 #define LIGHT_SUN GL_LIGHT2
-#define LIGHT_STREETLAMP GL_LIGHT3
+#define LIGHT_SIGN GL_LIGHT3
+#define LIGHT_SOLAR_SYSTEM_SUN GL_LIGHT4
+#define LIGHT_STREETLAMP1 GL_LIGHT5
+#define LIGHT_STREETLAMP2 GL_LIGHT6
+#define LIGHT_STREETLAMP3 GL_LIGHT7
 #define SWING_MAX_ANG 40
 
 typedef struct {
@@ -45,17 +49,17 @@ void VerticalCylinder(float radius, float height);
 void DrawSign(void);
 void DrawWindSpinner(void);
 void DrawSpinner(void);
-void drawBlade(void);
-void update(int value);
-void DrawStreetLight(void);
+void DrawBlade(void);
+void Update(int value);
+void DrawStreetLight(GLenum srcLight);
 void DrawSwings(void);
 void DrawSwing(void);
 void DrawFence(vec3 fromPoint, vec3 toPoint, float poleHeight);
 void DrawFlagPole(void);
-void update_flag(int value);
+void UpdateFlag(int value);
 void DrawFountain(void);
 void DrawDropletsOval(void);
-void update_droplets(int value);
+void UpdateDroplets(int value);
 float DrawChains(int length);
 float lerp(float a, float b, float t);
 float invLerp(float a, float b, float c);
@@ -135,7 +139,10 @@ int main(int argc, char **argv)
 	glEnable(GL_NORMALIZE);
 
 	glEnable(LIGHT_BALL);
-	glEnable(LIGHT_STREETLAMP);
+	glEnable(LIGHT_SIGN);
+	glEnable(LIGHT_STREETLAMP1);
+	glEnable(LIGHT_STREETLAMP2);
+	glEnable(LIGHT_STREETLAMP3);
 
 	//registering callbacks
 	glutDisplayFunc(drawingCB);
@@ -162,9 +169,9 @@ int main(int argc, char **argv)
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	glutTimerFunc(0, update, 0); // Start the update timer
-	glutTimerFunc(0, update_flag, 0);
-	glutTimerFunc(0, update_droplets, 0);
+	glutTimerFunc(0, Update, 0); // Start the Update timer
+	glutTimerFunc(0, UpdateFlag, 0);
+	glutTimerFunc(0, UpdateDroplets, 0);
 
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
@@ -378,6 +385,7 @@ void drawSolarSystem(void)
 
 void drawingCB(void)
 {
+	float boundery = 15;
 	GLenum er;
 	GLfloat light0Pos[] = { 0, 0, 0, 1 };
 	GLfloat light0Color[] = { 1, 1, 1, 1 };
@@ -385,6 +393,11 @@ void drawingCB(void)
 	GLfloat sunPos[] = { 0, 1, 0, 0 };
 	vec3 center = vec3_add(cameraPos, cameraForward);
 	vec3 up = { 0, 1, 0 };
+	vec3 fenceA1 = { -boundery, 0, boundery }, fenceA2 = { -boundery, 0, -boundery };
+	vec3 fenceB1 = { -boundery, 0, -boundery }, fenceB2 = { boundery, 0, -boundery };
+	vec3 fenceC1 = { boundery, 0, -boundery }, fenceC2 = { boundery, 0, boundery };
+	vec3 fenceD1 = { -boundery, 0, boundery }, fenceD2 = { -2, 0, boundery };
+	vec3 fenceE1 = { 4.5, 0, boundery }, fenceE2 = { boundery + 0.45, 0, boundery };
 
 	//clearing the background
 	if (camera_mode == CAMERA_MODEL)
@@ -428,81 +441,96 @@ void drawingCB(void)
 		glLightfv(LIGHT_SUN, GL_POSITION, sunPos);
 		glLightfv(LIGHT_SUN, GL_DIFFUSE, sunLightColor);
 		glPopMatrix();
-		drawGround();
 	}
-	//glTranslatef(0, 2, 0);
-	//drawSolarSystem();
-	//drawBouncingBall();
-	DrawCarousel();
 
-	/*
-	float boundery = 10;
+	DrawFence(fenceA1, fenceA2, 2);
+	DrawFence(fenceB1, fenceB2, 2);
+	DrawFence(fenceC1, fenceC2, 2);
+	DrawFence(fenceD1, fenceD2, 2);
+	DrawFence(fenceE1, fenceE2, 2);
 	
-	DrawFence((vec3) { -boundery, 0, boundery }, (vec3) { -boundery, 0, -boundery }, 2);
-	DrawFence((vec3) { -boundery, 0, -boundery },  (vec3) { boundery, 0, -boundery }, 2);
-	DrawFence((vec3) { boundery, 0, -boundery }, (vec3) { boundery, 0, boundery }, 2);
-	DrawFence((vec3) { -boundery, 0, boundery }, (vec3) { -2, 0, boundery }, 2);
-	DrawFence((vec3) { 4.5, 0, boundery }, (vec3) { boundery + 0.45, 0, boundery }, 2);
-	
+	// Draw Israel Flag
 	glPushMatrix();
 	glTranslatef(boundery, 0, boundery);
 	DrawFlagPole();
 	glPopMatrix();
 
+	// Draw Israel Flag
 	glPushMatrix();
 	glTranslatef(-boundery, 0, boundery);
 	DrawFlagPole();
 	glPopMatrix();
 
+	// Draw Sign
 	glPushMatrix();
 	glTranslatef(3, 0, boundery);
 	DrawSign();
 	glPopMatrix();
-	
+
+	// Draw WindSpinner
 	glPushMatrix();
-	glTranslatef(boundery - 0.5, 0, 0);
-	glRotatef(-90, 0, 1, 0);
-	//DrawStreetLight();
-	glPopMatrix();
-	
-	glPushMatrix();
-	glTranslatef(-boundery + 0.5, 1, 0);
-	//DrawWindSpinner();
+	glTranslatef(boundery - 1, 1, 0);
+	glRotatef(180, 0.0, 1.0, 0.0);
+	DrawWindSpinner();
 	glPopMatrix();
 
-
+	// Draw Fountain
 	glPushMatrix();
-	glTranslatef(0, 1, -boundery + 3);
-	//DrawSwings();
+	DrawFountain();
 	glPopMatrix();
 
+	// Draw Swings
+	glPushMatrix();
+	glTranslatef(0.0, 1.0, -boundery + 3.0);
+	DrawSwings();
+	glTranslatef(0.0, -1.0, -1.5);
+	DrawStreetLight(LIGHT_STREETLAMP3);
+	glPopMatrix();
+
+	// Draw Bouncing Ball
 	glPushMatrix();
 	glTranslatef(-boundery + 3, 1, -boundery + 3);
 	glRotatef(45, 0, 1, 0);
 	drawBouncingBall();
 	glPopMatrix();
 
-
+	// Draw Solar System
 	glPushMatrix();
 	glTranslatef(boundery - 4.5, 1, -boundery + 4.5);
 	drawSolarSystem();
 	glPopMatrix();
 
+	// Draw Carousel
+	glPushMatrix();
+	glTranslatef(boundery - 4 , 0.0, boundery - 4);
+	DrawCarousel();
+	glTranslatef(2, 0, 2.8);
+	glRotatef(200, 0.0, 1.0, 0.0);
+	DrawStreetLight(LIGHT_STREETLAMP1);
+	glPopMatrix();
 
-	DrawFountain();
-	*/
+	// Draw Co-Op Swing 
+	glPushMatrix();
+	glTranslatef(-boundery + 4, 1.0, boundery - 4);
+	glRotatef(-45, 0, 1, 0);
+	DrawCoOpSwing();
+	glRotatef(180, 0, 1, 0);
+	glTranslatef(0.0, -1, -2.0);
+	DrawStreetLight(LIGHT_STREETLAMP2);
+	glPopMatrix();
+	
 
-	//drawSolarSystem();
-	//DrawFountain();
+
+
 	//swapping buffers and displaying
 	//DrawStreetLight();
 	//DrawSquare(0.5, 0.5, 2, wood);
 	//DrawSwings();
 	//DrawStreetLight();
 	//DrawWindSpinner();
-	
-	glTranslated(0, 2, 0);
-	DrawCoOpSwing();
+
+
+	drawGround();
 
 	glutSwapBuffers();
 	//check for errors
@@ -743,13 +771,34 @@ void DrawSign(void)
 	float sign_height = 2;
 	float cylinder_height = 1;
 	float cylinder_radius = 0.15;
+
+	// TO BE FINISHED
+	GLfloat light_1_specular[] = { 100.0, 100.0, 100.0, 1.0 };
+	GLfloat light_1_diffuse[] = { 100.0, 100.0, 100.0, 1.0 };
+	GLfloat light_1_ambient[] = { 100.0, 100.0, 100.0, 1.0 };
+	GLfloat light_1_position[] = { 0.0, 3.28, 0.88, 1.0 };
+	GLfloat light_1_spotLight[] = { 0, -1, -0.577, 1 };
+	GLfloat light_1_spotCutOff[] = { 25 };
 	
+	glLightfv(LIGHT_SIGN, GL_DIFFUSE, light_1_diffuse);
+	glLightfv(LIGHT_SIGN, GL_SPECULAR, light_1_specular);
+	glLightfv(LIGHT_SIGN, GL_AMBIENT, light_1_ambient);
+	glLightfv(LIGHT_SIGN, GL_POSITION, light_1_position);
+	glLightfv(LIGHT_SIGN, GL_SPOT_DIRECTION, light_1_spotLight);
+	glLightfv(LIGHT_SIGN, GL_SPOT_CUTOFF, light_1_spotCutOff);
+
+	GLfloat mat[] = {232.0/255.0, 192.0/255.0, 155.0/255.0};
+	glMaterialfv(GL_FRONT, GL_AMBIENT, mat);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, mat);
+
 	glBindTexture(GL_TEXTURE_2D, wood2front);
 	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
 	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-	// Front TBD MAY BE OTHER TEXTURE
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
 	glBegin(GL_POLYGON);
-	
+	glNormal3f(0.0, 0.0, 1.0);
 	glTexCoord2f(0, 0); glVertex3f(-sign_width / 2,	cylinder_height,				0.05f);
 	glTexCoord2f(1, 0); glVertex3f(	sign_width / 2,	cylinder_height,				0.05f);
 	glTexCoord2f(1, 1); glVertex3f(	sign_width / 2,	cylinder_height + sign_height,	0.05f);
@@ -767,6 +816,7 @@ void DrawSign(void)
 
 	// Back
 	glBegin(GL_POLYGON);
+	glNormal3f(0.0, 0.0, -1.0);
 	glVertex3f(-sign_width / 2, cylinder_height,				-0.05f);
 	glVertex3f(+sign_width / 2, cylinder_height,				-0.05f);
 	glVertex3f(+sign_width / 2, cylinder_height + sign_height,	-0.05f);
@@ -775,6 +825,7 @@ void DrawSign(void)
 
 	// Right
 	glBegin(GL_POLYGON);
+	glNormal3f(1.0, 0.0, 0.0);
 	glVertex3f(sign_width / 2 + 0.001f, cylinder_height,				-0.05f);
 	glVertex3f(sign_width / 2 + 0.001f, cylinder_height,				+0.05f);
 	glVertex3f(sign_width / 2 + 0.001f, cylinder_height + sign_height,	+0.05f);
@@ -783,6 +834,7 @@ void DrawSign(void)
 
 	// Left
 	glBegin(GL_POLYGON);
+	glNormal3f(-1.0, 0.0, 0.0);
 	glVertex3f(-sign_width / 2 + 0.001f, cylinder_height,				-0.05f);
 	glVertex3f(-sign_width / 2 + 0.001f, cylinder_height,				+0.05f);
 	glVertex3f(-sign_width / 2 + 0.001f, cylinder_height + sign_height,	+0.05f);
@@ -791,6 +843,7 @@ void DrawSign(void)
 
 	// Top
 	glBegin(GL_POLYGON);
+	glNormal3f(0.0, 1.0, 0.0);
 	glVertex3f(+sign_width / 2, cylinder_height + sign_height,	+0.05f);
 	glVertex3f(-sign_width / 2, cylinder_height + sign_height,	+0.05f);
 	glVertex3f(-sign_width / 2, cylinder_height + sign_height,	-0.05f);
@@ -851,17 +904,31 @@ void DrawSign(void)
 	glDisable(GL_TEXTURE_GEN_S);
 	glDisable(GL_TEXTURE_GEN_T);
 
-
 	glBindTexture(GL_TEXTURE_2D, lamp);
 	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
 	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
 	glEnable(GL_TEXTURE_GEN_S);
 	glEnable(GL_TEXTURE_GEN_T);
 	glutSolidSphere(0.085,20,20);
+	
+	/*
+	GLfloat pos[16];
+	glGetFloatv(GL_MODELVIEW_MATRIX, pos);
+	printf("x = %f, y = %f, z = %f\n", pos[12], pos[13] ,pos[14]);
+	*/
+
 	glDisable(GL_TEXTURE_GEN_S);
 	glDisable(GL_TEXTURE_GEN_T);
 
 	/* 3 out */ glPopMatrix();
+}
+
+vec3 getPos() {
+	GLfloat pos[16];
+	glGetFloatv(GL_MODELVIEW_MATRIX, pos);
+	vec3 res = { pos[12], pos[13] ,pos[14] };
+
+	return res;
 }
 
 void VerticalCylinder(float radius, float height)
@@ -882,7 +949,7 @@ void reshapeCB(int width, int height)
 
 	zNear = 1; zFar = 1000;
 
-	//update viewport
+	//Update viewport
 	glViewport(0, 0, width, height);
 
 	//clear the transformation matrices (load identity)
@@ -1186,24 +1253,24 @@ void animateTimeChange(int value)
 	glutTimerFunc(ANIMATION_DELAY, animateTimeChange, value);
 }
 
-void update_flag(int value)
+void UpdateFlag(int value)
 {
 	float droop_values[16] = {0.005, 0.01, 0.02, 0.03, 0.05, 0.07, 0.09, 0.11, 0.12, 
 							0.11, 0.09, 0.07, 0.05, 0.03, 0.02, 0.01 }; // 16
 	droop = droop_values[droop_index];
 	droop_index++;
 	droop_index = droop_index == 16 ? 0 : droop_index;
-	glutTimerFunc(64, update_flag, 0);
+	glutTimerFunc(64, UpdateFlag, 0);
 	glutPostRedisplay();
 }
 
-void update_droplets(int value)
+void UpdateDroplets(int value)
 {
 	droplets_offset--;
 	if (droplets_offset <= -100) {
 		droplets_offset = -90;
 	}
-	glutTimerFunc(16, update_droplets, 0);
+	glutTimerFunc(16, UpdateDroplets, 0);
 	glutPostRedisplay();
 }
 
@@ -1338,26 +1405,27 @@ void DrawWindSpinner(void)
 	glPopMatrix();
 }
 
-void DrawStreetLight(void)
+void DrawStreetLight(GLenum srcLight )
 {
-
 	GLUquadric* quadric;
 	quadric = gluNewQuadric();
 
 	// lamp
-	GLfloat light_1_specular[] = { 100.0, 100.0, 100.0, 1.0 };
-	GLfloat light_1_diffuse[] = { 100.0, 100.0, 100.0, 1.0 };
-	GLfloat light_1_ambient[] = { 100.0, 100.0, 100.0, 1.0 };
+	GLfloat light_1_specular[] = { 1.0, 1.0, 1.0, 1.0 };
+	GLfloat light_1_diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
+	GLfloat light_1_ambient[] = { 0.1, 0.1, 0.1, 1.0 };
 	GLfloat light_1_position[] = { 0.0, 4.0, 0.9, 1.0 };
 	GLfloat light_1_spotLight[] = { 0, -1, 0, 1 };
-	GLfloat light_1_spotCutOff[] = { 25 };
+	GLfloat light_1_spotCutOff[] = { 55 };
 
-	glLightfv(LIGHT_STREETLAMP, GL_DIFFUSE, light_1_diffuse);
-	glLightfv(LIGHT_STREETLAMP, GL_SPECULAR, light_1_specular);
-	glLightfv(LIGHT_STREETLAMP, GL_AMBIENT, light_1_ambient);
-	glLightfv(LIGHT_STREETLAMP, GL_POSITION, light_1_position);
-	glLightfv(LIGHT_STREETLAMP, GL_SPOT_DIRECTION, light_1_spotLight);
-	glLightfv(LIGHT_STREETLAMP, GL_SPOT_CUTOFF, light_1_spotCutOff);
+	glLightfv(srcLight, GL_DIFFUSE, light_1_diffuse);
+	glLightfv(srcLight, GL_SPECULAR, light_1_specular);
+	glLightfv(srcLight, GL_AMBIENT, light_1_ambient);
+	glLightfv(srcLight, GL_POSITION, light_1_position);
+	glLightfv(srcLight, GL_SPOT_DIRECTION, light_1_spotLight);
+	glLightfv(srcLight, GL_SPOT_CUTOFF, light_1_spotCutOff);
+
+	PolishedSilverColor();
 
 	glPushMatrix();
 
@@ -1505,7 +1573,7 @@ void DrawSwingKid(int gender)
 	glPopMatrix();
 }
 
-void drawBlade(void)
+void DrawBlade(void)
 {
 	glPushMatrix();
 	glTranslated(0, 0, -1);
@@ -1522,7 +1590,7 @@ void DrawSpinner(void)
 	// Draw the wind spinner blades
 	for (i = 0; i < 6; ++i) {
 		glRotatef(60.0, 1.0, 0.0, 0.0);
-		drawBlade();
+		DrawBlade();
 	}
 
 	glPopMatrix();
@@ -1693,7 +1761,7 @@ void DrawArm(void)
 	glPopMatrix();
 }
 
-void update(int value) 
+void Update(int value) 
 {
 	float length = 0.8;
 	double omega = sqrt(9.81 / length);
@@ -1720,7 +1788,7 @@ void update(int value)
 	}
 
 	glutPostRedisplay();
-	glutTimerFunc(16, update, 0); // ~60 FPS
+	glutTimerFunc(16, Update, 0); // ~60 FPS
 }
 
 void DrawSquare(float xLen, float yLen, float zLen)
@@ -1956,17 +2024,3 @@ void EmeraldColor(void)
 	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular1);
 	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess1);
 }
-
-/*
-	// Light Settings
-
-	GLfloat light_1_specular[] = { 1, 1, 1, 1 };
-	GLfloat light_1_diffuse[] = { 1, 1, 1, 1 };
-	GLfloat light_1_ambient[] = { 1, 1, 1, 1 };
-	GLfloat light_1_position[] = { 5, 5, 0, 0 };
-	glLightfv(GL_LIGHT1, GL_POSITION, light_1_position);
-	glLightfv(GL_LIGHT1, GL_DIFFUSE, light_1_diffuse);
-	glLightfv(GL_LIGHT1, GL_SPECULAR, light_1_specular);
-	glLightfv(GL_LIGHT1, GL_AMBIENT, light_1_ambient);
-
-*/
