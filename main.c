@@ -72,7 +72,7 @@ void DrawSwingKid(int gender);
 void DrawHead(void);
 void DrawArm(void);
 void Drawlimb(float radius, float height);
-void DrawLeg(int gender);
+void DrawLeg(int gender, int isAnim);
 void DrawCarousel(void);
 void DrawBody(float radius, float height, int gender);
 void DrawSquare(float xLen, float yLen, float zLen);
@@ -84,6 +84,7 @@ void GoldColor(void);
 void PolishedSilverColor(void);
 void RubyColor(void);
 void EmeraldColor(void);
+void DrawCaruselKid(int gender);
 
 float time = 0;
 int isBanchExist = 0, dirSwingA = 1;
@@ -637,7 +638,13 @@ void DrawCarousel(void)
 			glutSolidSphere(0.25, 20, 20); // seat plate
 			glPopMatrix();
 		}
+
+
+		glTranslatef(0, 0.3, -1.3);
+		glScalef(1.2,1.2,1.2);
+		DrawCaruselKid(1);
 		glPopMatrix();
+
 		glTranslatef(0, 0.3, 0);
 
 		PaintSpec(27 / 255.0, 80 / 255.0, 160 / 255.0);
@@ -1679,13 +1686,13 @@ void DrawSwingKid(int gender)
 		// Left-leg
 		glPushMatrix();
 			glTranslatef(legPos.x, legPos.y, legPos.z);
-			DrawLeg(gender);
+			DrawLeg(gender, 1);
 		glPopMatrix();
 		
 		// Right-leg
 		glPushMatrix();
 			glTranslatef(-legPos.x, legPos.y, legPos.z);
-			DrawLeg(gender);
+			DrawLeg(gender, 1);
 		glPopMatrix();
 
 		// Left-arm
@@ -1864,7 +1871,7 @@ void Drawlimb(float radius, float height)
 	glPopMatrix();
 }
 
-void DrawLeg(int gender)
+void DrawLeg(int gender, int isAnim)
 {
 	float thighLength = 0.5;
 	float shockLength = 0.55;
@@ -1874,7 +1881,12 @@ void DrawLeg(int gender)
 		Drawlimb(0.12, thighLength);
 		glTranslatef(0 ,0, thighLength);
 		//shock
-		gender == 1 ? glRotatef(jointAngLeg, 1.0, 0.0, 0.0) : glRotatef(90 - jointAngLeg, 1.0, 0.0, 0.0);
+		if (isAnim == 1)
+			gender == 1 ? glRotatef(jointAngLeg, 1.0, 0.0, 0.0) : glRotatef(90 - jointAngLeg, 1.0, 0.0, 0.0);
+		else 
+			glRotatef(90, 1.0, 0.0, 0.0);
+		
+
 		Drawlimb(0.1, shockLength);
 		glTranslatef(0.0, 0.0,  shockLength);
 		glRotatef(-90, 1.0, 0.0, 0.0);
@@ -2096,14 +2108,14 @@ void DrawCoOpSwingKid(int gender) {
 	glPushMatrix();
 	glTranslatef(legPos.x, legPos.y, legPos.z);
 	glRotatef(30, 0.0, 1.0, 0.0);
-	DrawLeg(gender);
+	DrawLeg(gender, 1);
 	glPopMatrix();
 
 	// Right-leg
 	glPushMatrix();
 	glTranslatef(-legPos.x, legPos.y, legPos.z);
 	glRotatef(-30, 0.0, 1.0, 0.0);
-	DrawLeg(gender);
+	DrawLeg(gender, 1);
 	glPopMatrix();
 
 	// Left-arm
@@ -2117,6 +2129,53 @@ void DrawCoOpSwingKid(int gender) {
 	glPushMatrix();
 	glTranslatef(-armPos.x, armPos.y, armPos.z);
 	glRotatef(10.0, 1.0, 0.0, 0.0);
+	DrawArm();
+	glPopMatrix();
+
+	glPopMatrix();
+}
+
+void DrawCaruselKid(int gender) {
+	vec3 legPos = { 0.14, -0.1, 0.0 };
+	vec3 armPos = { 0.23, 0.5, 0.0 };
+
+	//PolishedSilverColor();
+
+	glPushMatrix();
+	// Body
+	glTranslatef(0.0, -0.05, -0.18);
+	DrawBody(0.25, 0.6, gender);
+
+	// Head
+	DrawHead();
+
+	// Left-leg
+	glPushMatrix();
+	glTranslatef(legPos.x, legPos.y, legPos.z);
+	glRotatef(30, 0.0, 1.0, 0.0);
+	DrawLeg(gender, 0);
+	glPopMatrix();
+
+	// Right-leg
+	glPushMatrix();
+	glTranslatef(-legPos.x, legPos.y, legPos.z);
+	glRotatef(-30, 0.0, 1.0, 0.0);
+	DrawLeg(gender, 0);
+	glPopMatrix();
+
+	// Left-arm
+	glPushMatrix();
+	glTranslatef(armPos.x, armPos.y, armPos.z);
+	glRotatef(-90.0, 1.0, 0.0, 0.0);
+	glRotatef(30.0, 0.0, 1.0, 0.0);
+	DrawArm();
+	glPopMatrix();
+
+	// Right-arm
+	glPushMatrix();
+	glTranslatef(-armPos.x, armPos.y, armPos.z);
+	glRotatef(-90.0, 1.0, 0.0, 0.0);
+	glRotatef(-30.0, 0.0, 1.0, 0.0);
 	DrawArm();
 	glPopMatrix();
 
