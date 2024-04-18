@@ -143,6 +143,7 @@ int main(int argc, char **argv)
 	glEnable(LIGHT_STREETLAMP1);
 	glEnable(LIGHT_STREETLAMP2);
 	glEnable(LIGHT_STREETLAMP3);
+	glEnable(LIGHT_SOLAR_SYSTEM_SUN);
 
 	//registering callbacks
 	glutDisplayFunc(drawingCB);
@@ -331,6 +332,18 @@ void drawSolarSystem(void)
 {
 	GLUquadric *sphere = gluNewQuadric();
 	GLUquadric *disk = gluNewQuadric();
+	GLfloat sunMat[] = { 0.984, 0.6666, 0.0, 1.0 };
+	GLfloat moonMat[] = { 1.0, 1.0, 1.0, 1.0 };
+	GLfloat earthMat[] = { 0.6, 0.6, 1.0, 1.0 };
+
+	GLfloat emission1[] = { 1, 1, 1, 1 };
+	GLfloat emission2[] = { 0, 0, 0, 1 };
+	GLfloat light_1_specular[] = { 1.0, 1.0, 1.0, 1.0 };
+	GLfloat light_1_diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
+	GLfloat light_1_ambient[] = { 0.1, 0.1, 0.1, 1.0 };
+	GLfloat light_1_position[] = { 0.0, 0.0, 0.0, 1.0 };
+
+
 	gluQuadricTexture(sphere, GL_TRUE);
 	glColor3f(0.4, 0.4, 0.4);
 
@@ -338,13 +351,24 @@ void drawSolarSystem(void)
 
 	glPushMatrix();
 	glRotatef(sunSelf, 0, 1, 0);
+
+	glLightfv(LIGHT_SOLAR_SYSTEM_SUN, GL_DIFFUSE, light_1_diffuse);
+	glLightfv(LIGHT_SOLAR_SYSTEM_SUN, GL_SPECULAR, light_1_specular);
+	glLightfv(LIGHT_SOLAR_SYSTEM_SUN, GL_AMBIENT, light_1_ambient);
+	glLightfv(LIGHT_SOLAR_SYSTEM_SUN, GL_POSITION, light_1_position);
+	glLightf(LIGHT_SOLAR_SYSTEM_SUN, GL_QUADRATIC_ATTENUATION, 0.1);
+	glMaterialfv(GL_FRONT, GL_AMBIENT, sunMat);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, sunMat);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, sunMat);
+	glMaterialfv(GL_FRONT, GL_EMISSION, emission1);
 	gluSphere(sphere, 1, 30, 30);
+	glMaterialfv(GL_FRONT, GL_EMISSION, emission2);
+
 	glPopMatrix();
 
 	glPushMatrix();
 	glRotatef(earthAngle, 0, 1, 0);
 	glTranslatef(3, 0, 0);
-
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glPushMatrix();
 	glRotatef(90, 1, 0, 0);
@@ -357,6 +381,10 @@ void drawSolarSystem(void)
 	glBindTexture(GL_TEXTURE_2D, earth);
 	glPushMatrix();
 	glRotatef(earthSelf, -1, 1, 0);
+
+	glMaterialfv(GL_FRONT, GL_AMBIENT, earthMat);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, earthMat);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, earthMat);
 	gluSphere(sphere, 0.4, 100, 100);
 
 	glPopMatrix();
@@ -366,8 +394,10 @@ void drawSolarSystem(void)
 	glRotatef(moonAngle, 0, 1, 0);
 	glTranslatef(1, 0, 0);
 	glRotatef(moonSelf, 0, 1, 0);
+	glMaterialfv(GL_FRONT, GL_AMBIENT, moonMat);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, moonMat);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, moonMat);
 	gluSphere(sphere, 0.25, 30, 30);
-
 	glPopMatrix();
 
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -909,7 +939,16 @@ void DrawSign(void)
 	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
 	glEnable(GL_TEXTURE_GEN_S);
 	glEnable(GL_TEXTURE_GEN_T);
+
+	GLfloat emission1[] = { 1, 1, 1, 1 };
+	GLfloat emission2[] = { 0, 0, 0, 1 };
+	glMaterialfv(GL_FRONT, GL_AMBIENT, mat);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, mat);
+	glMaterialfv(GL_FRONT, GL_EMISSION, emission1);
+
 	glutSolidSphere(0.085,20,20);
+	glMaterialfv(GL_FRONT, GL_EMISSION, emission2);
 	
 	/*
 	GLfloat pos[16];
@@ -1418,6 +1457,10 @@ void DrawStreetLight(GLenum srcLight )
 	GLfloat light_1_spotLight[] = { 0, -1, 0, 1 };
 	GLfloat light_1_spotCutOff[] = { 55 };
 
+	GLfloat mat[] = { 232.0 / 255.0, 192.0 / 255.0, 155.0 / 255.0 };
+	GLfloat emission1[] = { 1, 1, 1, 1 };
+	GLfloat emission2[] = { 0, 0, 0, 1 };
+
 	glLightfv(srcLight, GL_DIFFUSE, light_1_diffuse);
 	glLightfv(srcLight, GL_SPECULAR, light_1_specular);
 	glLightfv(srcLight, GL_AMBIENT, light_1_ambient);
@@ -1448,11 +1491,16 @@ void DrawStreetLight(GLenum srcLight )
 		glutSolidCone(0.2, 0.3, 10, 10);
 		glPopMatrix();
 
-
 		glBindTexture(GL_TEXTURE_2D, lamp);
 		glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
 		glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+
+		glMaterialfv(GL_FRONT, GL_AMBIENT, mat);
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat);
+		glMaterialfv(GL_FRONT, GL_SPECULAR, mat);
+		glMaterialfv(GL_FRONT, GL_EMISSION, emission1);
 		glutSolidSphere(0.12, 20, 20);
+		glMaterialfv(GL_FRONT, GL_EMISSION, emission2);
 
 		glDisable(GL_TEXTURE_GEN_S);
 		glDisable(GL_TEXTURE_GEN_T);
@@ -1468,11 +1516,16 @@ void DrawSwings(void)
 		glTranslated(0, -1, 0);
 
 		glBindTexture(GL_TEXTURE_2D, wood);
-		glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-		glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-		glEnable(GL_TEXTURE_GEN_S);
-		glEnable(GL_TEXTURE_GEN_T);
+		//glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+		//glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+		//glEnable(GL_TEXTURE_GEN_S);
+		//glEnable(GL_TEXTURE_GEN_T);
 	
+		GLfloat mat[] = { 232.0 / 255.0, 192.0 / 255.0, 155.0 / 255.0 };
+		glMaterialfv(GL_FRONT, GL_AMBIENT, mat);
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat);
+		glMaterialfv(GL_FRONT, GL_SPECULAR, mat);
+
 		// Right pillar
 		glPushMatrix();
 			glTranslated(2, 0, 0);
@@ -1625,8 +1678,10 @@ float DrawChains(int length)
 void DrawSwing(void)
 {
 	float y;
+	GLfloat mat[] = { 232.0 / 255.0, 192.0 / 255.0, 155.0 / 255.0 };
 
 	glPushMatrix();
+	PolishedSilverColor();
 
 		// Chain Left
 		glBindTexture(GL_TEXTURE_2D, metal);
@@ -1636,8 +1691,12 @@ void DrawSwing(void)
 		glEnable(GL_TEXTURE_GEN_T);
 		y = DrawChains(30);
 
+
 		glBindTexture(GL_TEXTURE_2D, wood);
 
+		glMaterialfv(GL_FRONT, GL_AMBIENT, mat);
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat);
+		glMaterialfv(GL_FRONT, GL_SPECULAR, mat);
 		// Draw Banch
 		glPushMatrix();
 			glTranslatef(-0.1, y, -0.27);
@@ -1645,6 +1704,7 @@ void DrawSwing(void)
 		glPopMatrix();
 
 		glBindTexture(GL_TEXTURE_2D, metal);
+		PolishedSilverColor();
 		// Chain Right
 		glTranslated(1, 0, 0);
 		DrawChains(30);
@@ -1797,10 +1857,10 @@ void DrawSquare(float xLen, float yLen, float zLen)
 
 	// Back
 	glBegin(GL_POLYGON);
-		glTexCoord2f(0, 0); glVertex3f(0, 0, 0);
-		glTexCoord2f(1, 0); glVertex3f(xLen, 0, 0);
-		glTexCoord2f(1, 1); glVertex3f(xLen, yLen, 0);
-		glTexCoord2f(0, 1); glVertex3f(0, yLen, 0);
+	glVertex3f(0, 0, 0);
+	glVertex3f(xLen, 0, 0);
+	glVertex3f(xLen, yLen, 0);
+	glVertex3f(0, yLen, 0);
 	glEnd();
 
 	// Front
