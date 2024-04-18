@@ -73,7 +73,7 @@ void DrawBody(float radius, float height, int gender);
 void DrawSquare(float xLen, float yLen, float zLen);
 void DrawCoOpSwing(void);
 void DrawCoOpSwingKid(int gender);
-
+void Paint(float r, float g, float b);
 void GoldColor(void);
 void PolishedSilverColor(void);
 void RubyColor(void);
@@ -640,6 +640,10 @@ void DrawFountain(void)
 	glPushMatrix();
 	glTranslatef(0, 0.0001, 0);
 	
+	GLfloat mat[] = { 0.7843, 0.7843, 0.7843, 1.0};
+	glMaterialfv(GL_FRONT, GL_AMBIENT, mat);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, mat);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	
@@ -817,7 +821,7 @@ void DrawSign(void)
 	glLightfv(LIGHT_SIGN, GL_SPOT_DIRECTION, light_1_spotLight);
 	glLightfv(LIGHT_SIGN, GL_SPOT_CUTOFF, light_1_spotCutOff);
 
-	GLfloat mat[] = {232.0/255.0, 192.0/255.0, 155.0/255.0};
+	GLfloat mat[] = {232.0/255.0, 192.0/255.0, 155.0/255.0, 1.0};
 	glMaterialfv(GL_FRONT, GL_AMBIENT, mat);
 	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat);
 	glMaterialfv(GL_FRONT, GL_SPECULAR, mat);
@@ -1456,8 +1460,6 @@ void DrawStreetLight(GLenum srcLight )
 	GLfloat light_1_position[] = { 0.0, 4.0, 0.9, 1.0 };
 	GLfloat light_1_spotLight[] = { 0, -1, 0, 1 };
 	GLfloat light_1_spotCutOff[] = { 55 };
-
-	GLfloat mat[] = { 232.0 / 255.0, 192.0 / 255.0, 155.0 / 255.0 };
 	GLfloat emission1[] = { 1, 1, 1, 1 };
 	GLfloat emission2[] = { 0, 0, 0, 1 };
 
@@ -1495,9 +1497,7 @@ void DrawStreetLight(GLenum srcLight )
 		glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
 		glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
 
-		glMaterialfv(GL_FRONT, GL_AMBIENT, mat);
-		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat);
-		glMaterialfv(GL_FRONT, GL_SPECULAR, mat);
+		Paint(232.0 / 255.0, 192.0 / 255.0, 155.0 / 255.0);
 		glMaterialfv(GL_FRONT, GL_EMISSION, emission1);
 		glutSolidSphere(0.12, 20, 20);
 		glMaterialfv(GL_FRONT, GL_EMISSION, emission2);
@@ -1516,15 +1516,7 @@ void DrawSwings(void)
 		glTranslated(0, -1, 0);
 
 		glBindTexture(GL_TEXTURE_2D, wood);
-		//glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
-		//glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
-		//glEnable(GL_TEXTURE_GEN_S);
-		//glEnable(GL_TEXTURE_GEN_T);
-	
-		GLfloat mat[] = { 232.0 / 255.0, 192.0 / 255.0, 155.0 / 255.0 };
-		glMaterialfv(GL_FRONT, GL_AMBIENT, mat);
-		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat);
-		glMaterialfv(GL_FRONT, GL_SPECULAR, mat);
+		Paint(232.0 / 255.0, 192.0 / 255.0, 155.0 / 255.0);
 
 		// Right pillar
 		glPushMatrix();
@@ -1678,7 +1670,6 @@ float DrawChains(int length)
 void DrawSwing(void)
 {
 	float y;
-	GLfloat mat[] = { 232.0 / 255.0, 192.0 / 255.0, 155.0 / 255.0 };
 
 	glPushMatrix();
 	PolishedSilverColor();
@@ -1693,10 +1684,8 @@ void DrawSwing(void)
 
 
 		glBindTexture(GL_TEXTURE_2D, wood);
+		Paint(232.0 / 255.0, 192.0 / 255.0, 155.0 / 255.0);
 
-		glMaterialfv(GL_FRONT, GL_AMBIENT, mat);
-		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat);
-		glMaterialfv(GL_FRONT, GL_SPECULAR, mat);
 		// Draw Banch
 		glPushMatrix();
 			glTranslatef(-0.1, y, -0.27);
@@ -2083,4 +2072,14 @@ void EmeraldColor(void)
 	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse1);
 	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular1);
 	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess1);
+}
+
+void Paint(float r, float g, float b) 
+{
+	GLfloat mat[] = { r, g, b, 1.0 };
+	glMaterialfv(GL_FRONT, GL_AMBIENT, mat);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, mat);
+	glColor3f(r, g, b);
+
 }
