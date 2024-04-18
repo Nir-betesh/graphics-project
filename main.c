@@ -84,6 +84,7 @@ void GoldColor(void);
 void PolishedSilverColor(void);
 void RubyColor(void);
 void EmeraldColor(void);
+void animateCamera(int value);
 
 float time = 0;
 int isBanchExist = 0, dirSwingA = 1;
@@ -125,6 +126,16 @@ GLuint boyFace;
 float droop = 0.0;
 int droop_index = 0;
 float droplets_offset = -90;
+
+
+// Sign, Flag, Bounce, WindSpinner, Carusel, ChainSwing, CoopSwing, SolarSys, Fountain
+const vec3 positions[9] = { {2.95, 3.25, 19.0},	{12.8, 4.0, 19.54},  {-10.4, 2.75, -7.95}, {10.31, 1.25, -0.10}, {15.34, 4.75, 12.9} , {-0.038, 2.75, -7.86} , {-6.1, 6.0, 10.0}, {13.68, 2.25, -5.65}, {-3.5, 3.25, -4.95} };
+const float angles_x[9] = {-15,		-16.5,	-22.5,	6,		-40.5,	-10.5,	-34.5,	-13.5,	-10.5 };
+const float angles_y[9] = { 0,	348,	15,		270,	75,		0,		108,	34.5,	216 };
+vec3 initialCameraPos;
+int selected_model = 0;
+float camera_phaze = 0, initialAngleX, initialAngleY;
+
 
 int main(int argc, char **argv)
 {
@@ -496,7 +507,8 @@ void drawingCB(void)
 		if (angleX < -45)
 			up = cameraForwardXZ;
 		gluLookAt(cameraPos.x, cameraPos.y, cameraPos.z, center.x, center.y, center.z, up.x, up.y, up.z);
-		printf("Pos: %f, %f, %f\t Dir: %f, %f, %f\n", cameraPos.x, cameraPos.y, cameraPos.z, cameraForward.x, cameraForward.y, cameraForward.z);
+		//printf("Pos: %f, %f, %f\t Dir: %f, %f, %f\n", cameraPos.x, cameraPos.y, cameraPos.z, cameraForward.x, cameraForward.y, cameraForward.z);
+		printf("angX: %f, angY: %f\n", angleX, angleY);
 		glPushMatrix();
 		glRotatef(sunRotation, 0, 0, -1);
 		glLightfv(LIGHT_SUN, GL_POSITION, sunPos);
@@ -1170,16 +1182,39 @@ void keyboardCB(unsigned char key, int x, int y)
 		}
 		glutPostRedisplay();
 		break;
-	case '1':
+	case '/':
 		camera_mode = CAMERA_MODEL;
 		resetCamera();
 		glutPostRedisplay();
 		break;
-	case '2':
+	case '*':
 		camera_mode = CAMERA_FREE;
 		resetCamera();
 		glutPostRedisplay();
 		break;
+	case '0':
+	case '1':
+	case '2':
+	case '3':
+	case '4':
+	case '5':
+	case '6':
+	case '7':
+	case '8':
+		if (!camera_phaze) {
+			initialCameraPos = cameraPos;
+			selected_model = key - '0';
+			if (abs(angleY - angles_y[selected_model]) > 180) {
+				initialAngleY = angleY + ((angleY > angles_y[selected_model]) ? -360 : 360);
+			}
+			else {
+				initialAngleY = angleY;
+			}
+			initialAngleX = angleX;
+			glutTimerFunc(ANIMATION_DELAY, animateCamera, 0);
+		}
+		break;
+
 	case 'w':
 		cameraPos = vec3_add(cameraPos, vec3_scale(cameraForwardXZ, CAMERA_SPEED));
 		glutPostRedisplay();
@@ -1280,6 +1315,32 @@ void keyboardSpecialCB(int key, int x, int y)
 		computeCameraVectors();
 	}
 	glutPostRedisplay();
+}
+
+void animateCamera(int value)
+{
+	const float step = 0.02;
+	if (!animation)
+		return;
+
+	if (camera_phaze > 1 - step)
+		camera_phaze = 1;
+
+	cameraPos.x = lerp(initialCameraPos.x, positions[selected_model].x, camera_phaze);
+	cameraPos.y = lerp(initialCameraPos.y, positions[selected_model].y, camera_phaze);
+	cameraPos.z = lerp(initialCameraPos.z, positions[selected_model].z, camera_phaze);
+
+	angleX = lerp(initialAngleX, angles_x[selected_model], camera_phaze);
+	angleY = lerp(initialAngleY, angles_y[selected_model], camera_phaze);
+	computeCameraVectors();
+	glutPostRedisplay();
+
+	camera_phaze += step;
+	if (camera_phaze >= 1) {
+		camera_phaze = 0;
+		return;
+	}
+	glutTimerFunc(ANIMATION_DELAY, animateCamera, 0);
 }
 
 void animateBouncingBall(int value)
