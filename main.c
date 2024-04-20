@@ -1716,6 +1716,7 @@ void DrawHead(void)
 {		
 	GLUquadric* quadric;
 	glPushMatrix();
+	Paint(236.0 / 255, 174.0 / 255, 131.0 / 255);
 		glPushMatrix();
 			glTranslatef(0.0, 0.65, 0.0);
 			glutSolidSphere(0.1, 10, 10);// neck
@@ -1749,22 +1750,24 @@ void DrawHead(void)
 
 void DrawBody(float radius, float height, int gender)
 {
+		glPushMatrix();
 	GLUquadric* quadric;
 
 	if (gender) {
+		Paint(0.0, 0.0, 1.0);
 		VerticalCylinder(radius, height);
 		glutSolidSphere(0.25, 10, 10);
 	}
 	else {
-		glPushMatrix();
+		Paint(244.0 / 255, 186.0 / 255, 219.0 / 255);
 			quadric = gluNewQuadric();
 			gluQuadricTexture(quadric, GL_TRUE);
 			glRotatef(-90.0f, 1.0f, 0.0f, 0.0f);
 			glTranslatef(0.0, 0.0, -0.2);
 			gluCylinder(quadric, radius + 0.2, radius , height + 0.2  , 32, 32);
 			gluDeleteQuadric(quadric);
-		glPopMatrix();
 	}
+		glPopMatrix();
 
 }
 
@@ -1773,6 +1776,7 @@ void Drawlimb(float radius, float height)
 	GLUquadric* quadric;
 	//draw pill shaped limb in the pos Z direction
 	glPushMatrix();
+		Paint(236.0 / 255, 174.0 / 255, 131.0 / 255);
 		quadric = gluNewQuadric();
 		gluCylinder(quadric, radius, radius, height, 32, 32);
 		gluDeleteQuadric(quadric);
@@ -1790,6 +1794,7 @@ void DrawLeg(int gender, int isAnim)
 	float shockLength = 0.55;
 	float footLength = 0.2;
 	glPushMatrix();
+		Paint(236.0 / 255, 174.0 / 255, 131.0 / 255);
 		//theigh
 		Drawlimb(0.12, thighLength);
 		glTranslatef(0 ,0, thighLength);
@@ -1815,6 +1820,7 @@ void DrawArm(void)
 	float armLenght = 0.5;
 
 	glPushMatrix();
+		Paint(236.0 / 255, 174.0 / 255, 131.0 / 255);
 		glutSolidSphere(0.13, 10, 10); // Shoulder
 		Drawlimb(0.1, armLenght);
 		glTranslatef(0.0, 0.0, armLenght);
