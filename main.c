@@ -27,6 +27,10 @@
 #define LIGHT_STREETLAMP2 GL_LIGHT6
 #define LIGHT_STREETLAMP3 GL_LIGHT7
 #define SWING_MAX_ANG 40
+#define TEXTURE_GROUND (GL_LIGHT7 + 1)
+#define TEXTURE_BOUNCING_BALL (GL_LIGHT7 + 2)
+#define TEXTURE_SOLAR_SYSTEM (GL_LIGHT7 + 3)
+#define TEXTURE_WOOD (GL_LIGHT7 + 4)
 
 typedef struct {
 	GLfloat x;
@@ -39,6 +43,7 @@ void drawingCB(void);
 void reshapeCB(int width, int height);
 void keyboardCB(unsigned char key, int x, int y);
 void keyboardSpecialCB(int key, int x, int y);
+void menuCB(int value);
 void animateBouncingBall(int value);
 void animateSolarSystem(int value);
 void animateTimeChange(int value);
@@ -74,11 +79,13 @@ void DrawSquare(float xLen, float yLen, float zLen);
 void DrawCoOpSwing(void);
 void DrawCoOpSwingKid(int gender);
 void Paint(float r, float g, float b);
+void PaintSpec(float r, float g, float b);
 void GoldColor(void);
 void PolishedSilverColor(void);
 void RubyColor(void);
 void EmeraldColor(void);
 void DrawCaruselKid(int gender);
+void animateCamera(int value);
 
 float time = 0;
 int isBanchExist = 0, dirSwingA = 1;
@@ -86,7 +93,8 @@ float swingAng = SWING_MAX_ANG;
 
 int FOVy = 60;
 int camera_mode = CAMERA_MODEL;
-int lighting = 1, head_light = 1;
+int lighting = 1, head_light = 0, texture = 1, animation = 1;
+int sunEnable = 1, ballEnable = 1, solarEnable = 1, lampEnable = 1, signEnable = 1;
 float angleX = 0, angleY = 0, radius = 5;
 vec3 cameraPos = { 0, 3, 5 };
 vec3 cameraForward = { 0, 0, -1 };
@@ -109,10 +117,8 @@ float clearColor[] = { 135.0f / 255, 206.0f / 255, 235.0f / 255 };
 GLfloat sunLightColor[] = { 1, 1, 1, 1 };
 float sunRotation = 0;
 
-GLuint ground, ball, wall, sun, moon, earth;
-GLuint wood;
-GLuint wood2;
-GLuint wood2front;
+GLuint ground, groundOrig, grass, grassOrig, ball, ballOrig, wall, wallOrig, sun, sunOrig, moon, moonOrig, earth, earthOrig;
+GLuint wood, woodOrig, wood2, wood2Orig, wood2front, wood2frontOrig;
 GLuint lamp;
 GLuint metal;
 GLuint flag;
@@ -122,8 +128,20 @@ float droop = 0.0;
 int droop_index = 0;
 float droplets_offset = -90;
 
+
+// Sign, Flag, Bounce, WindSpinner, Carusel, ChainSwing, CoopSwing, SolarSys, Fountain
+const vec3 positions[9] = { {2.95, 3.25, 19.0},	{12.8, 4.0, 19.54},  {-10.4, 2.75, -7.95}, {10.31, 1.25, -0.10}, {15.34, 4.75, 12.9} , {-0.038, 2.75, -7.86} , {-6.1, 6.0, 10.0}, {13.68, 2.25, -5.65}, {-3.5, 3.25, -4.95} };
+const float angles_x[9] = {-15,		-16.5,	-22.5,	6,		-40.5,	-10.5,	-34.5,	-13.5,	-10.5 };
+const float angles_y[9] = { 0,	348,	15,		270,	75,		0,		108,	34.5,	216 };
+vec3 initialCameraPos;
+int selected_model = 0;
+float camera_phaze = 0, initialAngleX, initialAngleY;
+
+
 int main(int argc, char **argv)
 {
+	int texture_menu, light_menu;
+
 	//initizlizing GLUT
 	glutInit(&argc, argv);
 
@@ -145,24 +163,42 @@ int main(int argc, char **argv)
 	glEnable(LIGHT_STREETLAMP2);
 	glEnable(LIGHT_STREETLAMP3);
 	glEnable(LIGHT_SOLAR_SYSTEM_SUN);
+	glEnable(LIGHT_SUN);
 
 	//registering callbacks
 	glutDisplayFunc(drawingCB);
 	glutReshapeFunc(reshapeCB);
 	glutKeyboardFunc(keyboardCB);
 	glutSpecialFunc(keyboardSpecialCB);
-	glutTimerFunc(ANIMATION_DELAY, animateBouncingBall, 0);
-	glutTimerFunc(ANIMATION_DELAY, animateSolarSystem, 0);
 
-	ground = load_texture("ground.bmp");
-	ball = load_texture("tex3.bmp");
-	wall = load_texture("wall.bmp");
-	sun = load_texture("sun.bmp");
-	moon = load_texture("moon.bmp");
-	earth = load_texture("earth.bmp");
-	wood = load_texture("wood.bmp");
-	wood2 = load_texture("wood2.bmp");
-	wood2front = load_texture("wood2front.bmp");
+	texture_menu = glutCreateMenu(menuCB);
+	glutAddMenuEntry("Toggle ground texture", TEXTURE_GROUND);
+	glutAddMenuEntry("Toggle bouncing ball textures", TEXTURE_BOUNCING_BALL);
+	glutAddMenuEntry("Toggle solar system textures", TEXTURE_SOLAR_SYSTEM);
+	glutAddMenuEntry("Toggle wood textures", TEXTURE_WOOD);
+
+	light_menu = glutCreateMenu(menuCB);
+	glutAddMenuEntry("Toggle sun light", LIGHT_SUN);
+	glutAddMenuEntry("Toggle sign light", LIGHT_SIGN);
+	glutAddMenuEntry("Toggle solar system light", LIGHT_SOLAR_SYSTEM_SUN);
+	glutAddMenuEntry("Toggle bouncing ball light", LIGHT_BALL);
+	glutAddMenuEntry("Toggle street lamp lights", LIGHT_STREETLAMP1);
+
+	glutCreateMenu(menuCB);
+	glutAddSubMenu("Lights", light_menu);
+	glutAddSubMenu("Textures", texture_menu);
+	glutAttachMenu(GLUT_RIGHT_BUTTON);
+
+	ground = groundOrig = load_texture("ground.bmp");
+	grass = grassOrig = load_texture("grass.bmp");
+	ball = ballOrig = load_texture("tex3.bmp");
+	wall = wallOrig = load_texture("wall.bmp");
+	sun = sunOrig = load_texture("sun.bmp");
+	moon = moonOrig = load_texture("moon.bmp");
+	earth = earthOrig = load_texture("earth.bmp");
+	wood = woodOrig = load_texture("wood.bmp");
+	wood2 = wood2Orig = load_texture("wood2.bmp");
+	wood2front = wood2frontOrig = load_texture("wood2front.bmp");
 	lamp = load_texture("lamp.bmp");
 	flag = load_texture("flag.bmp");
 	water = load_texture("water.bmp");
@@ -171,9 +207,11 @@ int main(int argc, char **argv)
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	glutTimerFunc(0, Update, 0); // Start the Update timer
+	glutTimerFunc(0, Update, 0);
 	glutTimerFunc(0, UpdateFlag, 0);
 	glutTimerFunc(0, UpdateDroplets, 0);
+	glutTimerFunc(ANIMATION_DELAY, animateBouncingBall, 0);
+	glutTimerFunc(ANIMATION_DELAY, animateSolarSystem, 0);
 
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
@@ -237,17 +275,29 @@ float vec3_dist(vec3 a, vec3 b)
 	return sqrt((double)dx * dx + (double)dy * dy + (double)dz * dz);
 }
 
+void resumeModulate(void)
+{
+	if (lighting)
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	else
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+
+}
+
 void drawGround(void)
 {
 	int i, j;
-	GLfloat diffuse[] = { 1, 1, 1, 1 };
 	glBindTexture(GL_TEXTURE_2D, ground);
-	glColor3f(0, 0.3, 0);
+	glColor3f(0, 1, 0);
 	glNormal3f(0, 1, 0);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, diffuse);
-	glBegin(GL_QUADS);
+	texture && ground ? Paint(1, 1, 1) : Paint(0.3, 0, 0);
 	for (i = -200; i < 200; i += 2) {
 		for (j = -200; j < 200; j += 2) {
+			if (i < -16 || i > 16 || j < -16 || j > 16)
+				glBindTexture(GL_TEXTURE_2D, grass);
+			else
+				glBindTexture(GL_TEXTURE_2D, ground);
+			glBegin(GL_QUADS);
 			glTexCoord2f(0, 0);
 			glVertex3f(i, 0, j);
 			glTexCoord2f(1, 0);
@@ -256,9 +306,9 @@ void drawGround(void)
 			glVertex3f(i + 2, 0, j + 2);
 			glTexCoord2f(0, 1);
 			glVertex3f(i, 0, j + 2);
+			glEnd();
 		}
 	}
-	glEnd();
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -272,6 +322,7 @@ void drawBouncingBall(void)
 	GLUquadric *sphere = gluNewQuadric();
 	gluQuadricTexture(sphere, GL_TRUE);
 
+	texture && ball ? PaintSpec(1, 1, 1) : PaintSpec(0, 0, 0);
 	glBindTexture(GL_TEXTURE_2D, wall);
 	glBegin(GL_QUADS);
 	//glNormal3f(ballPosition + 1, -1, -1);
@@ -320,12 +371,12 @@ void drawBouncingBall(void)
 	glLightfv(LIGHT_BALL, GL_DIFFUSE, ballColor);
 	glLightfv(LIGHT_BALL, GL_AMBIENT, ballAmbient);
 	glLightf(LIGHT_BALL, GL_QUADRATIC_ATTENUATION, 0.2);
-
+	PaintSpec(1, 0, 0);
 	gluSphere(sphere, 0.4, 30, 30);
 	gluDeleteQuadric(sphere);
 	glPopMatrix();
 
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	resumeModulate();
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -333,11 +384,8 @@ void drawSolarSystem(void)
 {
 	GLUquadric *sphere = gluNewQuadric();
 	GLUquadric *disk = gluNewQuadric();
-	GLfloat sunMat[] = { 0.984, 0.6666, 0.0, 1.0 };
-	GLfloat moonMat[] = { 1.0, 1.0, 1.0, 1.0 };
-	GLfloat earthMat[] = { 0.6, 0.6, 1.0, 1.0 };
 
-	GLfloat emission1[] = { 1, 1, 1, 1 };
+	GLfloat emission1[] = { 0.984, 0.6666, 0.0, 1 };
 	GLfloat emission2[] = { 0, 0, 0, 1 };
 	GLfloat light_1_specular[] = { 1.0, 1.0, 1.0, 1.0 };
 	GLfloat light_1_diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
@@ -357,10 +405,8 @@ void drawSolarSystem(void)
 	glLightfv(LIGHT_SOLAR_SYSTEM_SUN, GL_SPECULAR, light_1_specular);
 	glLightfv(LIGHT_SOLAR_SYSTEM_SUN, GL_AMBIENT, light_1_ambient);
 	glLightfv(LIGHT_SOLAR_SYSTEM_SUN, GL_POSITION, light_1_position);
-	glLightf(LIGHT_SOLAR_SYSTEM_SUN, GL_QUADRATIC_ATTENUATION, 0.1);
-	glMaterialfv(GL_FRONT, GL_AMBIENT, sunMat);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, sunMat);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, sunMat);
+	glLightf(LIGHT_SOLAR_SYSTEM_SUN, GL_QUADRATIC_ATTENUATION, 0.05);
+	PaintSpec(0.984, 0.6666, 0.0);
 	glMaterialfv(GL_FRONT, GL_EMISSION, emission1);
 	gluSphere(sphere, 1, 30, 30);
 	glMaterialfv(GL_FRONT, GL_EMISSION, emission2);
@@ -374,6 +420,7 @@ void drawSolarSystem(void)
 	glPushMatrix();
 	glRotatef(90, 1, 0, 0);
 	glDisable(GL_LIGHTING);
+	glColor3f(1, 1, 1);
 	gluDisk(disk, 0.95, 1, 30, 30);
 	if (lighting)
 		glEnable(GL_LIGHTING);
@@ -383,9 +430,7 @@ void drawSolarSystem(void)
 	glPushMatrix();
 	glRotatef(earthSelf, -1, 1, 0);
 
-	glMaterialfv(GL_FRONT, GL_AMBIENT, earthMat);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, earthMat);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, earthMat);
+	PaintSpec(0.6, 0.6, 1.0);
 	gluSphere(sphere, 0.4, 100, 100);
 
 	glPopMatrix();
@@ -395,9 +440,7 @@ void drawSolarSystem(void)
 	glRotatef(moonAngle, 0, 1, 0);
 	glTranslatef(1, 0, 0);
 	glRotatef(moonSelf, 0, 1, 0);
-	glMaterialfv(GL_FRONT, GL_AMBIENT, moonMat);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, moonMat);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, moonMat);
+	PaintSpec(1.0, 1.0, 1.0);
 	gluSphere(sphere, 0.25, 30, 30);
 	glPopMatrix();
 
@@ -448,7 +491,6 @@ void drawingCB(void)
 	if (camera_mode == CAMERA_MODEL) {
 		glEnable(LIGHT_HEAD);
 		glLightf(LIGHT_HEAD, GL_QUADRATIC_ATTENUATION, 0);
-		glDisable(LIGHT_SUN);
 
 		glTranslatef(0, 0, -radius);
 		glRotatef(angleX, 1, 0, 0);
@@ -458,7 +500,7 @@ void drawingCB(void)
 	if (camera_mode == CAMERA_FREE) {
 		if (head_light) {
 			glEnable(LIGHT_HEAD);
-			glLightf(LIGHT_HEAD, GL_QUADRATIC_ATTENUATION, 0.007);
+			glLightf(LIGHT_HEAD, GL_QUADRATIC_ATTENUATION, 0.03);
 		}
 		else {
 			glDisable(LIGHT_HEAD);
@@ -466,7 +508,8 @@ void drawingCB(void)
 		if (angleX < -45)
 			up = cameraForwardXZ;
 		gluLookAt(cameraPos.x, cameraPos.y, cameraPos.z, center.x, center.y, center.z, up.x, up.y, up.z);
-		glEnable(LIGHT_SUN);
+		//printf("Pos: %f, %f, %f\t Dir: %f, %f, %f\n", cameraPos.x, cameraPos.y, cameraPos.z, cameraForward.x, cameraForward.y, cameraForward.z);
+		printf("angX: %f, angY: %f\n", angleX, angleY);
 		glPushMatrix();
 		glRotatef(sunRotation, 0, 0, -1);
 		glLightfv(LIGHT_SUN, GL_POSITION, sunPos);
@@ -569,16 +612,12 @@ void drawingCB(void)
 	if (er) printf("error: %d\n", er);
 }
 
-void DrawCarousel(void) {
-	GLfloat matt_yellow[] = { 187/255.0, 162/255.0, 60/255.0, 0.55 };
-	GLfloat matt_blue[] = { 27 / 255.0, 80 / 255.0, 160 / 255.0, 0.55 };
-	GLfloat mat_shininess128[] = { 128 };
+void DrawCarousel(void)
+{
 	int i;
 
 	glPushMatrix();
-	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, matt_yellow);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, matt_yellow);
-	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess128);
+	PaintSpec(187 / 255.0, 162 / 255.0, 60 / 255.0);
 
 	glPushMatrix();
 	glRotatef(rotationAngle, 0, 1, 0);
@@ -620,9 +659,7 @@ void DrawCarousel(void) {
 
 		glTranslatef(0, 0.3, 0);
 
-		glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, matt_blue);
-		glMaterialfv(GL_FRONT, GL_SPECULAR, matt_blue);
-		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess128);
+		PaintSpec(27 / 255.0, 80 / 255.0, 160 / 255.0);
 
 		VerticalCylinder(0.1, 1.3); // centre cylinder
 		glPushMatrix();
@@ -647,27 +684,16 @@ void DrawFountain(void)
 	glPushMatrix();
 	glTranslatef(0, 0.0001, 0);
 	
-	GLfloat mat[] = { 0.7843, 0.7843, 0.7843, 1.0};
-	glMaterialfv(GL_FRONT, GL_AMBIENT, mat);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, mat);
+	Paint(0.7843, 0.7843, 0.7843);
 	glBindTexture(GL_TEXTURE_2D, 0);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+	//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	
 	glPushMatrix();
-	for (i = 0; i < 360; i++) {
-		glPushMatrix();
-		glTranslatef(3, 0, 0);
-		VerticalCylinder(0.3, 1.1);
-		glPopMatrix();
-		glRotatef(1, 0, 1, 0);
-	}
-	glPopMatrix();
-
-	glPushMatrix();
-	glTranslatef(0, 1.1, 0);
+	glScalef(1, 3.8, 1);
+	glTranslatef(0, 0.15, 0);
 	glRotatef(90, 1, 0, 0);
-	glutSolidTorus(0.3, 3, 50, 100);
+	glutSolidTorus(0.2, 2.85, 30, 30);
+	
 	glPopMatrix();
 
 	VerticalCylinder(0.2, 2.8);
@@ -677,12 +703,12 @@ void DrawFountain(void)
 	glutSolidTorus(0.1, 0.25, 20, 20);
 	glPopMatrix();
 
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	resumeModulate();
 	glBindTexture(GL_TEXTURE_2D, 0);
 	
 	
 	///////// DROPLETS
-
+	texture ? PaintSpec(1, 1, 1) : PaintSpec(0, 0, 1);
 	for (i = 0; i < 10; i++) {
 		glPushMatrix();
 		glRotatef(36 * i, 0, 1, 0);
@@ -694,7 +720,7 @@ void DrawFountain(void)
 	}
 	
 	glBindTexture(GL_TEXTURE_2D, water);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+	//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
 	glPushMatrix();
 	glTranslatef(0, 1, 0);
@@ -703,7 +729,7 @@ void DrawFountain(void)
 	gluDeleteQuadric(sphere);
 	glPopMatrix();
 
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	resumeModulate();
 	glBindTexture(GL_TEXTURE_2D, 0);
 	
 	glPopMatrix();
@@ -725,12 +751,13 @@ void DrawDropletsOval(void)
 		glTranslatef(2, 0, 0);
 
 		glBindTexture(GL_TEXTURE_2D, water);
-		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+		if (timeOfDay == TIME_DAY)
+			glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
 		glScalef(1, 2.5, 1);
 		gluSphere(sphere, 0.02, 10, 10);
 
-		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+		resumeModulate();
 		glBindTexture(GL_TEXTURE_2D, 0);
 		
 		glPopMatrix();
@@ -753,6 +780,7 @@ void DrawFence(vec3 fromPoint, vec3 toPoint, float poleHeight)
 	vec3 normal_direction = vec3_scale(direction, 1/distance);
 	vec3 scaled_direction = vec3_scale(normal_direction, poleDistance);
 	int i;
+	PaintSpec(232.0 / 255.0, 192.0 / 255.0, 155.0 / 255.0);
 	glPushMatrix();
 	glTranslated(fromPoint.x, fromPoint.y, fromPoint.z);
 	glBindTexture(GL_TEXTURE_2D, wood);
@@ -780,6 +808,7 @@ void DrawFlagPole(void)
 	float h = w * 2 / 3;
 
 	/* 1 in */ glPushMatrix();
+	PaintSpec(232.0 / 255.0, 192.0 / 255.0, 155.0 / 255.0);
 	glBindTexture(GL_TEXTURE_2D, wood);
 	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
 	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
@@ -793,6 +822,7 @@ void DrawFlagPole(void)
 
 	glTranslatef(poleRadius, 0, 0);
 
+	PaintSpec(1, 1, 1);
 	glBindTexture(GL_TEXTURE_2D, flag);
 	glBegin(GL_POLYGON);
 
@@ -814,12 +844,14 @@ void DrawSign(void)
 	float cylinder_radius = 0.15;
 
 	// TO BE FINISHED
-	GLfloat light_1_specular[] = { 100.0, 100.0, 100.0, 1.0 };
-	GLfloat light_1_diffuse[] = { 100.0, 100.0, 100.0, 1.0 };
-	GLfloat light_1_ambient[] = { 100.0, 100.0, 100.0, 1.0 };
+	GLfloat light_1_specular[] = { 1, 1, 1, 1.0 };
+	GLfloat light_1_diffuse[] = { 1, 1, 1, 1.0 };
+	GLfloat light_1_ambient[] = { 0.2, 0.2, 0.2, 1.0 };
 	GLfloat light_1_position[] = { 0.0, 3.28, 0.88, 1.0 };
 	GLfloat light_1_spotLight[] = { 0, -1, -0.577, 1 };
 	GLfloat light_1_spotCutOff[] = { 25 };
+	GLfloat emission1[] = { 1, 1, 1, 1 };
+	GLfloat emission2[] = { 0, 0, 0, 1 };
 	
 	glLightfv(LIGHT_SIGN, GL_DIFFUSE, light_1_diffuse);
 	glLightfv(LIGHT_SIGN, GL_SPECULAR, light_1_specular);
@@ -828,15 +860,12 @@ void DrawSign(void)
 	glLightfv(LIGHT_SIGN, GL_SPOT_DIRECTION, light_1_spotLight);
 	glLightfv(LIGHT_SIGN, GL_SPOT_CUTOFF, light_1_spotCutOff);
 
-	GLfloat mat[] = {232.0/255.0, 192.0/255.0, 155.0/255.0, 1.0};
-	glMaterialfv(GL_FRONT, GL_AMBIENT, mat);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, mat);
+	PaintSpec(232.0 / 255.0, 192.0 / 255.0, 155.0 / 255.0);
 
 	glBindTexture(GL_TEXTURE_2D, wood2front);
 	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
 	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	resumeModulate();
 
 	glBegin(GL_POLYGON);
 	glNormal3f(0.0, 0.0, 1.0);
@@ -951,13 +980,7 @@ void DrawSign(void)
 	glEnable(GL_TEXTURE_GEN_S);
 	glEnable(GL_TEXTURE_GEN_T);
 
-	GLfloat emission1[] = { 1, 1, 1, 1 };
-	GLfloat emission2[] = { 0, 0, 0, 1 };
-	glMaterialfv(GL_FRONT, GL_AMBIENT, mat);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, mat);
 	glMaterialfv(GL_FRONT, GL_EMISSION, emission1);
-
 	glutSolidSphere(0.085,20,20);
 	glMaterialfv(GL_FRONT, GL_EMISSION, emission2);
 	
@@ -969,6 +992,7 @@ void DrawSign(void)
 
 	glDisable(GL_TEXTURE_GEN_S);
 	glDisable(GL_TEXTURE_GEN_T);
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 	/* 3 out */ glPopMatrix();
 }
@@ -1047,8 +1071,8 @@ void computeCameraVectors(void)
 	vec3 camFacingXZ = { 0, 0, -1 };
 	vec3 temp;
 
-	if (angleX > -2)
-		angleX = -2;
+	if (angleX > 90)
+		angleX = 90;
 	else if (angleX < -90)
 		angleX = -90;
 
@@ -1085,6 +1109,60 @@ void rotateAroundPoint(void)
 	cameraPos = vec3_sub(cameraPos, vec3_scale(cameraForward, len));
 }
 
+void menuCB(int value)
+{
+	switch (value) {
+	case LIGHT_SUN:
+		sunEnable = !sunEnable;
+		sunEnable ? glEnable(LIGHT_SUN) : glDisable(LIGHT_SUN);
+		break;
+	case LIGHT_BALL:
+		ballEnable = !ballEnable;
+		ballEnable ? glEnable(LIGHT_BALL) : glDisable(LIGHT_BALL);
+		break;
+	case LIGHT_SIGN:
+		signEnable = !signEnable;
+		signEnable ? glEnable(LIGHT_SIGN) : glDisable(LIGHT_SIGN);
+		break;
+	case LIGHT_STREETLAMP1:
+		lampEnable = !lampEnable;
+		if (lampEnable) {
+			glEnable(LIGHT_STREETLAMP1);
+			glEnable(LIGHT_STREETLAMP2);
+			glEnable(LIGHT_STREETLAMP3);
+		}
+		else {
+			glDisable(LIGHT_STREETLAMP1);
+			glDisable(LIGHT_STREETLAMP2);
+			glDisable(LIGHT_STREETLAMP3);
+		}
+		break;
+	case LIGHT_SOLAR_SYSTEM_SUN:
+		solarEnable = !solarEnable;
+		solarEnable ? glEnable(LIGHT_SOLAR_SYSTEM_SUN) : glDisable(LIGHT_SOLAR_SYSTEM_SUN);
+		break;
+	case TEXTURE_GROUND:
+		ground = ground ? 0 : groundOrig;
+		grass = grass ? 0 : grassOrig;
+		break;
+	case TEXTURE_BOUNCING_BALL:
+		ball = ball ? 0 : ballOrig;
+		break;
+	case TEXTURE_SOLAR_SYSTEM:
+		sun = sun ? 0 : sunOrig;
+		moon = moon ? 0 : moonOrig;
+		earth = earth ? 0 : earthOrig;
+		break;
+	case TEXTURE_WOOD:
+		wood = wood ? 0 : woodOrig;
+		wood2 = wood2 ? 0 : wood2Orig;
+		wood2front = wood2front ? 0 : wood2frontOrig;
+		break;
+	}
+
+	glutPostRedisplay();
+}
+
 void keyboardCB(unsigned char key, int x, int y)
 {
 	switch (key) {
@@ -1111,16 +1189,39 @@ void keyboardCB(unsigned char key, int x, int y)
 		}
 		glutPostRedisplay();
 		break;
-	case '1':
+	case '/':
 		camera_mode = CAMERA_MODEL;
 		resetCamera();
 		glutPostRedisplay();
 		break;
-	case '2':
+	case '*':
 		camera_mode = CAMERA_FREE;
 		resetCamera();
 		glutPostRedisplay();
 		break;
+	case '0':
+	case '1':
+	case '2':
+	case '3':
+	case '4':
+	case '5':
+	case '6':
+	case '7':
+	case '8':
+		if (!camera_phaze) {
+			initialCameraPos = cameraPos;
+			selected_model = key - '0';
+			if (abs(angleY - angles_y[selected_model]) > 180) {
+				initialAngleY = angleY + ((angleY > angles_y[selected_model]) ? -360 : 360);
+			}
+			else {
+				initialAngleY = angleY;
+			}
+			initialAngleX = angleX;
+			glutTimerFunc(ANIMATION_DELAY, animateCamera, 0);
+		}
+		break;
+
 	case 'w':
 		cameraPos = vec3_add(cameraPos, vec3_scale(cameraForwardXZ, CAMERA_SPEED));
 		glutPostRedisplay();
@@ -1143,16 +1244,20 @@ void keyboardCB(unsigned char key, int x, int y)
 		break;
 	case 'f':
 		cameraPos.y -= CAMERA_SPEED;
-		if (cameraPos.y < 2)
-			cameraPos.y = 2;
+		if (cameraPos.y < 1.25)
+			cameraPos.y = 1.25;
 		glutPostRedisplay();
 		break;
 	case 'q':
+		if (angleX > -10)
+			return;
 		angleY = wrapAngle(angleY - CAMERA_ROTATION_SPEED, 360);
 		rotateAroundPoint();
 		glutPostRedisplay();
 		break;
 	case 'e':
+		if (angleX > -10)
+			return;
 		angleY = wrapAngle(angleY + CAMERA_ROTATION_SPEED, 360);
 		rotateAroundPoint();
 		glutPostRedisplay();
@@ -1173,6 +1278,22 @@ void keyboardCB(unsigned char key, int x, int y)
 		transPhase = PHASE_TO_TWILIGHT;
 		phase = 0;
 		glutTimerFunc(ANIMATION_DELAY, animateTimeChange, 0);
+		break;
+	case 't':
+		texture = !texture;
+		texture ? glEnable(GL_TEXTURE_2D) : glDisable(GL_TEXTURE_2D);
+		glutPostRedisplay();
+		break;
+	case 'n':
+		animation = !animation;
+		if (animation) {
+			glutTimerFunc(0, Update, 0);
+			glutTimerFunc(0, UpdateFlag, 0);
+			glutTimerFunc(0, UpdateDroplets, 0);
+			glutTimerFunc(ANIMATION_DELAY, animateBouncingBall, 0);
+			glutTimerFunc(ANIMATION_DELAY, animateSolarSystem, 0);
+		}
+		break;
 	}
 }
 
@@ -1203,8 +1324,37 @@ void keyboardSpecialCB(int key, int x, int y)
 	glutPostRedisplay();
 }
 
+void animateCamera(int value)
+{
+	const float step = 0.02;
+	if (!animation)
+		return;
+
+	if (camera_phaze > 1 - step)
+		camera_phaze = 1;
+
+	cameraPos.x = lerp(initialCameraPos.x, positions[selected_model].x, camera_phaze);
+	cameraPos.y = lerp(initialCameraPos.y, positions[selected_model].y, camera_phaze);
+	cameraPos.z = lerp(initialCameraPos.z, positions[selected_model].z, camera_phaze);
+
+	angleX = lerp(initialAngleX, angles_x[selected_model], camera_phaze);
+	angleY = lerp(initialAngleY, angles_y[selected_model], camera_phaze);
+	computeCameraVectors();
+	glutPostRedisplay();
+
+	camera_phaze += step;
+	if (camera_phaze >= 1) {
+		camera_phaze = 0;
+		return;
+	}
+	glutTimerFunc(ANIMATION_DELAY, animateCamera, 0);
+}
+
 void animateBouncingBall(int value)
 {
+	if (!animation)
+		return;
+
 	ballPosition += dxBall;
 
 	if (ballPosition >= 0.9) {
@@ -1222,6 +1372,9 @@ void animateBouncingBall(int value)
 
 void animateSolarSystem(int value)
 {
+	if (!animation)
+		return;
+
 	sunSelf = wrapAngle(sunSelf + CELESTIAL_SELF_SPIN, 360);
 	earthSelf = wrapAngle(earthSelf + CELESTIAL_SELF_SPIN, 360);
 	moonSelf = wrapAngle(moonSelf + CELESTIAL_SELF_SPIN, 360);
@@ -1242,7 +1395,7 @@ void animateTimeChange(int value)
 	GLfloat *fromLight, *toLight;
 
 	if (timeOfDay == TIME_NIGHT) {
-		if (transPhase == PHASE_TO_TWILIGHT) {
+		if (transPhase == PHASE_TO_TWILIGHT && animation) {
 			from = day;
 			fromLight = sunlight;
 			fromAngle = 0;
@@ -1260,7 +1413,7 @@ void animateTimeChange(int value)
 		}
 	}
 	else {
-		if (transPhase == PHASE_TO_TWILIGHT) {
+		if (transPhase == PHASE_TO_TWILIGHT && animation) {
 			from = night;
 			fromLight = nightlight;
 			fromAngle = -90;
@@ -1280,6 +1433,10 @@ void animateTimeChange(int value)
 
 	if (phase > 1 - TIME_RATE)
 		phase = 1;
+	if (!animation) {
+		phase = 1;
+		transPhase = PHASE_TO_END;
+	}
 	clearColor[0] = lerp(from[0], to[0], phase);
 	clearColor[1] = lerp(from[1], to[1], phase);
 	clearColor[2] = lerp(from[2], to[2], phase);
@@ -1305,6 +1462,9 @@ void animateTimeChange(int value)
 
 void UpdateFlag(int value)
 {
+	if (!animation)
+		return;
+
 	float droop_values[16] = {0.005, 0.01, 0.02, 0.03, 0.05, 0.07, 0.09, 0.11, 0.12, 
 							0.11, 0.09, 0.07, 0.05, 0.03, 0.02, 0.01 }; // 16
 	droop = droop_values[droop_index];
@@ -1316,6 +1476,9 @@ void UpdateFlag(int value)
 
 void UpdateDroplets(int value)
 {
+	if (!animation)
+		return;
+
 	droplets_offset--;
 	if (droplets_offset <= -100) {
 		droplets_offset = -90;
@@ -1407,25 +1570,12 @@ void DrawWindSpinner(void)
 {
 	float CylinderHeight = 3.0f;
 	float CylinderRadius = 0.1f;
-	// Ruby Color
-	GLfloat mat_ambient2[] = { 0.1745, 0.01175, 0.01175, 0.55 };
-	GLfloat mat_diffuse2[] = { 0.61424, 0.04136, 0.04136, 0.55 };
-	GLfloat mat_specular2[] = { 0.727811, 0.626959, 0.626959, 0.55 };
-	GLfloat mat_shininess2[] = { 76.8 };
 
-	// Polished Silver Color
-	GLfloat mat_ambient[] = { 0.23125, 0.23125, 0.23125, 1.0 };
-	GLfloat mat_diffuse[] = { 0.2775, 0.2775, 0.2775, 1.0 };
-	GLfloat mat_specular[] = { 0.773911, 0.773911, 0.773911, 1.0 };
-	GLfloat mat_shininess[] = { 51.22 };
 	glPushMatrix();
 	glTranslatef(0, -1.5, 0);
 	glPushMatrix();
 
-	glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
-	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+	PolishedSilverColor();
 	VerticalCylinder(0.1, 3.0);
 	glPopMatrix();
 
@@ -1443,10 +1593,7 @@ void DrawWindSpinner(void)
 	glPushMatrix();
 	glTranslatef(0.2, 3.0f, 0);
 
-	glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient2);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse2);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular2);
-	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess2);
+	RubyColor();
 
 	glutSolidSphere(0.1, 20, 20);
 	DrawSpinner();
@@ -1504,7 +1651,7 @@ void DrawStreetLight(GLenum srcLight )
 		glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
 		glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
 
-		Paint(232.0 / 255.0, 192.0 / 255.0, 155.0 / 255.0);
+		PaintSpec(232.0 / 255.0, 192.0 / 255.0, 155.0 / 255.0);
 		glMaterialfv(GL_FRONT, GL_EMISSION, emission1);
 		glutSolidSphere(0.12, 20, 20);
 		glMaterialfv(GL_FRONT, GL_EMISSION, emission2);
@@ -1514,6 +1661,7 @@ void DrawStreetLight(GLenum srcLight )
 		gluDeleteQuadric(quadric);
 
 	glPopMatrix(); 
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void DrawSwings(void) 
@@ -1523,7 +1671,7 @@ void DrawSwings(void)
 		glTranslated(0, -1, 0);
 
 		glBindTexture(GL_TEXTURE_2D, wood);
-		Paint(232.0 / 255.0, 192.0 / 255.0, 155.0 / 255.0);
+		PaintSpec(232.0 / 255.0, 192.0 / 255.0, 155.0 / 255.0);
 
 		// Right pillar
 		glPushMatrix();
@@ -1691,7 +1839,7 @@ void DrawSwing(void)
 
 
 		glBindTexture(GL_TEXTURE_2D, wood);
-		Paint(232.0 / 255.0, 192.0 / 255.0, 155.0 / 255.0);
+		PaintSpec(232.0 / 255.0, 192.0 / 255.0, 155.0 / 255.0);
 
 		// Draw Banch
 		glPushMatrix();
@@ -1830,6 +1978,9 @@ void DrawArm(void)
 
 void Update(int value) 
 {
+	if (!animation)
+		return;
+
 	float length = 0.8;
 	double omega = sqrt(9.81 / length);
 	float time_period = 2 * PI * sqrt(length / 9.81);
@@ -1864,6 +2015,7 @@ void DrawSquare(float xLen, float yLen, float zLen)
 
 	// Back
 	glBegin(GL_POLYGON);
+	glNormal3f(0, 0, -1);
 	glVertex3f(0, 0, 0);
 	glVertex3f(xLen, 0, 0);
 	glVertex3f(xLen, yLen, 0);
@@ -1872,6 +2024,7 @@ void DrawSquare(float xLen, float yLen, float zLen)
 
 	// Front
 	glBegin(GL_POLYGON);
+	glNormal3f(0, 0, 1);
 	glVertex3f(0.0, 0.0, zLen);
 	glVertex3f(xLen, 0.0, zLen);
 	glVertex3f(xLen, yLen, zLen);
@@ -1880,6 +2033,7 @@ void DrawSquare(float xLen, float yLen, float zLen)
 	
 	// Right
 	glBegin(GL_POLYGON);
+	glNormal3f(1, 0, 0);
 	glVertex3f(xLen, 0.0, 0.0);
 	glVertex3f(xLen, yLen, 0.0);
 	glVertex3f(xLen, yLen, zLen);
@@ -1888,6 +2042,7 @@ void DrawSquare(float xLen, float yLen, float zLen)
 
 	// Left
 	glBegin(GL_POLYGON);
+	glNormal3f(-1, 0, 0);
 	glVertex3f(0.0, 0.0, 0.0);
 	glVertex3f(0.0, 0.0, zLen);
 	glVertex3f(0.0, yLen, zLen);
@@ -1896,6 +2051,7 @@ void DrawSquare(float xLen, float yLen, float zLen)
 
 	// Top
 	glBegin(GL_POLYGON);
+	glNormal3f(0, 1, 0);
 	glVertex3f(0.0, yLen, 0.0);
 	glVertex3f(0.0, yLen, zLen);
 	glVertex3f(xLen, yLen, zLen);
@@ -1904,6 +2060,7 @@ void DrawSquare(float xLen, float yLen, float zLen)
 
 	// Down
 	glBegin(GL_POLYGON);
+	glNormal3f(0, -1, 0);
 	glVertex3f(0.0, 0.0, 0.0);
 	glVertex3f(0.0, 0.0, zLen);
 	glVertex3f(xLen, 0.0, zLen);
@@ -1917,6 +2074,7 @@ void DrawSquare(float xLen, float yLen, float zLen)
 void DrawCoOpSwing(void)
 {
 	GLUquadric* quadric;
+	PaintSpec(1, 1, 0);
 	glPushMatrix();
 		glRotatef(coOpSwingAng, 0, 0, 1);
 		DrawSquare(3.5, 0.1, 0.6); // half swing
@@ -1938,6 +2096,7 @@ void DrawCoOpSwing(void)
 
 		//bench 1
 		glPushMatrix();
+		PaintSpec(200.0 / 255.0, 160.0 / 255.0, 120.0 / 255.0);
 			glTranslatef(-3.5, 0, 0);
 			DrawSquare(0.1, 0.7, 0.6);
 			glTranslatef(0.9, 0.0, 0.05);
@@ -1986,6 +2145,7 @@ void DrawCoOpSwing(void)
 
 	//GoldColor();
 	// Left Stand
+	PaintSpec(0.7, 0.7, 0.7);
 	glPushMatrix();
 		glTranslatef(-0.25, -1, -0.2);
 		DrawSquare(0.5, 1.5, 0.1);
@@ -2111,6 +2271,7 @@ void PolishedSilverColor(void){
 	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
 	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
 	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+	glColor3f(0.2775, 0.2775, 0.2775);
 }
 
 void RubyColor(void)
@@ -2124,6 +2285,7 @@ void RubyColor(void)
 	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse2);
 	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular2);
 	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess2);
+	glColor3f(0.61424, 0.04136, 0.04136);
 }
 
 void EmeraldColor(void)
@@ -2140,6 +2302,18 @@ void EmeraldColor(void)
 }
 
 void Paint(float r, float g, float b) 
+{
+	GLfloat mat[] = { r, g, b, 1.0 };
+	GLfloat matSpec[] = { 0, 0, 0, 1.0 };
+	glMaterialfv(GL_FRONT, GL_AMBIENT, mat);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, matSpec);
+	glMaterialf(GL_FRONT, GL_SHININESS, 0);
+	glColor3f(r, g, b);
+
+}
+
+void PaintSpec(float r, float g, float b) 
 {
 	GLfloat mat[] = { r, g, b, 1.0 };
 	glMaterialfv(GL_FRONT, GL_AMBIENT, mat);
