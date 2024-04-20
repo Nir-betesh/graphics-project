@@ -92,8 +92,8 @@ int isBanchExist = 0, dirSwingA = 1;
 float swingAng = SWING_MAX_ANG;
 
 int FOVy = 60;
-int camera_mode = CAMERA_MODEL;
-int lighting = 1, head_light = 0, texture = 1, animation = 1;
+int camera_mode = CAMERA_FREE;
+int lighting = 1, head_light = 1, texture = 1, animation = 1;
 int sunEnable = 1, ballEnable = 1, solarEnable = 1, lampEnable = 1, signEnable = 1;
 float angleX = 0, angleY = 0, radius = 5;
 vec3 cameraPos = { 0, 3, 5 };
@@ -983,12 +983,6 @@ void DrawSign(void)
 	glMaterialfv(GL_FRONT, GL_EMISSION, emission1);
 	glutSolidSphere(0.085,20,20);
 	glMaterialfv(GL_FRONT, GL_EMISSION, emission2);
-	
-	/*
-	GLfloat pos[16];
-	glGetFloatv(GL_MODELVIEW_MATRIX, pos);
-	printf("x = %f, y = %f, z = %f\n", pos[12], pos[13] ,pos[14]);
-	*/
 
 	glDisable(GL_TEXTURE_GEN_S);
 	glDisable(GL_TEXTURE_GEN_T);
@@ -1165,7 +1159,10 @@ void menuCB(int value)
 
 void keyboardCB(unsigned char key, int x, int y)
 {
-	switch (key) {
+
+	int lowerKey = tolower(key);
+
+	switch (lowerKey) {
 	case 27:
 		exit(0);
 		break;
