@@ -316,6 +316,8 @@ void drawBouncingBall(void)
 	GLfloat ballLight[] = { ballPosition, 0, 0, 1 };
 	GLfloat ballColor[] = { 2, 0.7, 0.7, 1 };
 	GLfloat ballAmbient[] = { 0.4, 0.4, 0.4, 1 };
+	GLfloat ballEmissionOn[] = { 1, 1, 1, 1 };
+	GLfloat ballEmissionOff[] = { 0, 0, 0, 1 };
 	float scale = 1;
 	float translatePos = ballPosition > 0 ? -0.4 : 0.4;
 	GLUquadric *sphere = gluNewQuadric();
@@ -330,7 +332,7 @@ void drawBouncingBall(void)
 		scale = invLerp(1, 0.6, ballPosition);
 
 	glBindTexture(GL_TEXTURE_2D, ball);
-	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+	glMaterialfv(GL_FRONT, GL_EMISSION, ballEmissionOn);
 
 	glPushMatrix();
 	glTranslatef(ballPosition, 0, 0);
@@ -341,43 +343,38 @@ void drawBouncingBall(void)
 	glLightfv(LIGHT_BALL, GL_POSITION, ballLight);
 	glLightfv(LIGHT_BALL, GL_DIFFUSE, ballColor);
 	glLightfv(LIGHT_BALL, GL_AMBIENT, ballAmbient);
-	glLightf(LIGHT_BALL, GL_QUADRATIC_ATTENUATION, 0.2);
+	glLightf(LIGHT_BALL, GL_QUADRATIC_ATTENUATION, 0.04);
 	PaintSpec(1, 0, 0);
 	gluSphere(sphere, 0.4, 30, 30);
 	gluDeleteQuadric(sphere);
 	glPopMatrix();
-	resumeModulate();
+	glMaterialfv(GL_FRONT, GL_EMISSION, ballEmissionOff);
 
 	(texture && ballTexEnable) ? PaintSpec(1, 1, 1) : PaintSpec(0, 0, 0);
 	glBindTexture(GL_TEXTURE_2D, wall);
+	glMaterialfv(GL_FRONT, GL_EMISSION, ballColor);
 	glBegin(GL_QUADS);
-	//glNormal3f(ballPosition + 1, -1, -1);
 	glNormal3f(1, 0, 0);
 	glTexCoord2f(0, 1);
 	glVertex3f(-1, 1, 1);
-	//glNormal3f(ballPosition + 1, 1, -1);
 	glTexCoord2f(0, 0);
 	glVertex3f(-1, -1, 1);
-	//glNormal3f(ballPosition + 1, 1, 1);
 	glTexCoord2f(1, 0);
 	glVertex3f(-1, -1, -1);
-	//glNormal3f(ballPosition + 1, -1, 1);
 	glTexCoord2f(1, 1);
 	glVertex3f(-1, 1, -1);
-	//glNormal3f(ballPosition - 1, -1, -1);
+
 	glNormal3f(-1, 0, 0);
 	glTexCoord2f(1, 1);
 	glVertex3f(1, 1, 1);
-	//glNormal3f(ballPosition - 1, 1, -1);
 	glTexCoord2f(1, 0);
 	glVertex3f(1, -1, 1);
-	//glNormal3f(ballPosition - 1, 1, 1);
 	glTexCoord2f(0, 0);
 	glVertex3f(1, -1, -1);
-	//glNormal3f(ballPosition - 1, -1, 1);
 	glTexCoord2f(0, 1);
 	glVertex3f(1, 1, -1);
 	glEnd();
+	glMaterialfv(GL_FRONT, GL_EMISSION, ballEmissionOff);
 
 	glDisable(GL_TEXTURE_2D);
 }
@@ -495,8 +492,6 @@ void drawingCB(void)
 	if (angleX < -45)
 		up = cameraForwardXZ;
 	gluLookAt(cameraPos.x, cameraPos.y, cameraPos.z, center.x, center.y, center.z, up.x, up.y, up.z);
-	//printf("Pos: %f, %f, %f\t Dir: %f, %f, %f\n", cameraPos.x, cameraPos.y, cameraPos.z, cameraForward.x, cameraForward.y, cameraForward.z);
-	printf("angX: %f, angY: %f\n", angleX, angleY);
 	glPushMatrix();
 	glRotatef(sunRotation, 0, 0, -1);
 	glLightfv(LIGHT_SUN, GL_POSITION, sunPos);
