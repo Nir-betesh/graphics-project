@@ -496,14 +496,11 @@ void drawingCB(void)
 	if (angleX < -45)
 		up = cameraForwardXZ;
 	gluLookAt(cameraPos.x, cameraPos.y, cameraPos.z, center.x, center.y, center.z, up.x, up.y, up.z);
-	//printf("Pos: %f, %f, %f\t Dir: %f, %f, %f\n", cameraPos.x, cameraPos.y, cameraPos.z, cameraForward.x, cameraForward.y, cameraForward.z);
-	printf("angX: %f, angY: %f\n", angleX, angleY);
 	glPushMatrix();
 	glRotatef(sunRotation, 0, 0, -1);
 	glLightfv(LIGHT_SUN, GL_POSITION, sunPos);
 	glLightfv(LIGHT_SUN, GL_DIFFUSE, sunLightColor);
 	glPopMatrix();
-	
 
 	DrawFence(fenceA1, fenceA2, 2);
 	DrawFence(fenceB1, fenceB2, 2);
@@ -1690,7 +1687,6 @@ void DrawSwings(void)
 
 	glPopMatrix();
 }
-
 
 
 void DrawBlade(void)
