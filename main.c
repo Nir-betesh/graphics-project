@@ -3,6 +3,7 @@
 #include<math.h>
 #include"GL/glut.h"
 
+// Constant definitions
 #define PI 3.14159265359f
 #define ANIMATION_DELAY 40
 #define CAMERA_ROTATION_SPEED 1.5f
@@ -30,6 +31,7 @@
 #define TEXTURE_SOLAR_SYSTEM (GL_LIGHT7 + 3)
 #define TEXTURE_WOOD (GL_LIGHT7 + 4)
 
+// Helper type to handle 3D vectors
 typedef struct {
 	GLfloat x;
 	GLfloat y;
@@ -85,6 +87,7 @@ void EmeraldColor(void);
 void DrawCaruselKid(int gender);
 void animateCamera(int value);
 
+// Globals
 float time = 0;
 int isBanchExist = 0, dirSwingA = 1;
 float swingAng = SWING_MAX_ANG;
@@ -170,6 +173,7 @@ int main(int argc, char **argv)
 	glutKeyboardFunc(keyboardCB);
 	glutSpecialFunc(keyboardSpecialCB);
 
+	// Create right-click menu
 	texture_menu = glutCreateMenu(menuCB);
 	glutAddMenuEntry("Toggle ground texture", TEXTURE_GROUND);
 	glutAddMenuEntry("Toggle bouncing ball textures", TEXTURE_BOUNCING_BALL);
@@ -188,6 +192,7 @@ int main(int argc, char **argv)
 	glutAddSubMenu("Textures", texture_menu);
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
 
+	// Load all textures
 	ground = load_texture("ground.bmp");
 	grass = load_texture("grass.bmp");
 	ball = load_texture("tex3.bmp");
@@ -210,6 +215,7 @@ int main(int argc, char **argv)
 	glutTimerFunc(ANIMATION_DELAY, animateBouncingBall, 0);
 	glutTimerFunc(ANIMATION_DELAY, animateSolarSystem, 0);
 
+	// Make sure texturing interacts with lighting
 	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
@@ -286,10 +292,11 @@ void drawGround(void)
 	int i, j;
 	if (texture && groundTexEnable)
 		glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, ground);
 	glColor3f(0, 1, 0);
 	glNormal3f(0, 1, 0);
 	texture && groundTexEnable ? Paint(1, 1, 1) : Paint(0.3, 0, 0);
+	// Build the ground from a lot of small quads so that lighting interacts correctly with the ground
+	// Otherwise the ground will not be lit because OpenGL uses per-vertex lighting
 	for (i = -200; i < 200; i += 2) {
 		for (j = -200; j < 200; j += 2) {
 			if (i < -16 || i > 16 || j < -16 || j > 16)
@@ -326,18 +333,24 @@ void drawBouncingBall(void)
 	if (texture && ballTexEnable)
 		glEnable(GL_TEXTURE_2D);
 
+	// How much to squash the ball
 	if (ballPosition < -0.6)
 		scale = invLerp(-1, -0.6, ballPosition);
 	else if (ballPosition > 0.6)
 		scale = invLerp(1, 0.6, ballPosition);
 
 	glBindTexture(GL_TEXTURE_2D, ball);
+	// Since the ball is a light source, make it emissive
 	glMaterialfv(GL_FRONT, GL_EMISSION, ballEmissionOn);
 
 	glPushMatrix();
+	// Move the ball to its final position
 	glTranslatef(ballPosition, 0, 0);
+	// Move the ball back to the origin
 	glTranslatef(-translatePos * scale, 0, 0);
+	// Squash the ball on the axis of movement and expand it on the other two
 	glScalef(scale, 2 - scale, 2 - scale);
+	// Move the ball so that its edge touches the origin
 	glTranslatef(translatePos, 0, 0);
 
 	glLightfv(LIGHT_BALL, GL_POSITION, ballLight);
@@ -345,6 +358,7 @@ void drawBouncingBall(void)
 	glLightfv(LIGHT_BALL, GL_AMBIENT, ballAmbient);
 	glLightf(LIGHT_BALL, GL_QUADRATIC_ATTENUATION, 0.04);
 	PaintSpec(1, 0, 0);
+	// Draw the ball
 	gluSphere(sphere, 0.4, 30, 30);
 	gluDeleteQuadric(sphere);
 	glPopMatrix();
@@ -354,6 +368,7 @@ void drawBouncingBall(void)
 	glBindTexture(GL_TEXTURE_2D, wall);
 	glMaterialfv(GL_FRONT, GL_EMISSION, ballColor);
 	glBegin(GL_QUADS);
+	// Left wall
 	glNormal3f(1, 0, 0);
 	glTexCoord2f(0, 1);
 	glVertex3f(-1, 1, 1);
@@ -364,6 +379,7 @@ void drawBouncingBall(void)
 	glTexCoord2f(1, 1);
 	glVertex3f(-1, 1, -1);
 
+	// Right wall
 	glNormal3f(-1, 0, 0);
 	glTexCoord2f(1, 1);
 	glVertex3f(1, 1, 1);
@@ -409,12 +425,14 @@ void drawSolarSystem(void)
 	glLightf(LIGHT_SOLAR_SYSTEM_SUN, GL_QUADRATIC_ATTENUATION, 0.05);
 	PaintSpec(0.984, 0.6666, 0.0);
 	glMaterialfv(GL_FRONT, GL_EMISSION, emission1);
+	// Draw the sun
 	gluSphere(sphere, 1, 30, 30);
 	glMaterialfv(GL_FRONT, GL_EMISSION, emission2);
 
 	glPopMatrix();
 
 	glPushMatrix();
+	// Rotate the earth and moon around the sun
 	glRotatef(earthAngle, 0, 1, 0);
 	glTranslatef(3, 0, 0);
 	glDisable(GL_TEXTURE_2D);
@@ -431,19 +449,24 @@ void drawSolarSystem(void)
 		glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, earth);
 	glPushMatrix();
+	// Rotate the earth around itself
 	glRotatef(earthSelf, -1, 1, 0);
 
 	PaintSpec(0.6, 0.6, 1.0);
+	// Draw the earth
 	gluSphere(sphere, 0.4, 100, 100);
 
 	glPopMatrix();
 
 	glBindTexture(GL_TEXTURE_2D, moon);
 
+	// Rotate the moon around the earth
 	glRotatef(moonAngle, 0, 1, 0);
 	glTranslatef(1, 0, 0);
+	// Rotate the moon around itself
 	glRotatef(moonSelf, 0, 1, 0);
 	PaintSpec(1.0, 1.0, 1.0);
+	// Draw the moon
 	gluSphere(sphere, 0.25, 30, 30);
 	glPopMatrix();
 
@@ -469,6 +492,7 @@ void drawingCB(void)
 	GLfloat light0Ambient[] = { 0.2, 0.2, 0.2, 1 };
 	GLfloat sunPos[] = { 0, 1, 0, 0 };
 	GLfloat sunAmbient[] = { sunLightColor[0] * 0.45, sunLightColor[1] * 0.45, sunLightColor[2] * 0.45, 1 };
+	// Look at a point infront of the camera
 	vec3 center = vec3_add(cameraPos, cameraForward);
 	vec3 up = { 0, 1, 0 };
 	vec3 fenceA1 = { -boundery, 0, boundery }, fenceA2 = { -boundery, 0, -boundery };
@@ -485,6 +509,7 @@ void drawingCB(void)
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
+	// The light is attached to the camera
 	glLightfv(LIGHT_HEAD, GL_POSITION, light0Pos);
 	glLightfv(LIGHT_HEAD, GL_DIFFUSE, light0Color);
 	glLightfv(LIGHT_HEAD, GL_AMBIENT, light0Ambient);
@@ -754,8 +779,8 @@ void DrawFence(vec3 fromPoint, vec3 toPoint, float poleHeight)
 	if (texture && woodTexEnable)
 		glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, wood);
-	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
-	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
 	glEnable(GL_TEXTURE_GEN_S);
 	glEnable(GL_TEXTURE_GEN_T);
 	for (i = 0; i < n_poles; i++) {
@@ -783,8 +808,8 @@ void DrawFlagPole(void)
 	if (texture && woodTexEnable)
 		glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, wood);
-	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
-	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
 	glEnable(GL_TEXTURE_GEN_S);
 	glEnable(GL_TEXTURE_GEN_T);
 	VerticalCylinder(poleRadius, poleHeight);
@@ -938,6 +963,7 @@ void DrawSign(void)
 	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
 	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
 
+	// Make light bulb emissive since it's a light source
 	glMaterialfv(GL_FRONT, GL_EMISSION, emission1);
 	glutSolidSphere(0.085,20,20);
 	glMaterialfv(GL_FRONT, GL_EMISSION, emission2);
@@ -947,14 +973,6 @@ void DrawSign(void)
 	glDisable(GL_TEXTURE_2D);
 
 	/* 3 out */ glPopMatrix();
-}
-
-vec3 getPos() {
-	GLfloat pos[16];
-	glGetFloatv(GL_MODELVIEW_MATRIX, pos);
-	vec3 res = { pos[12], pos[13] ,pos[14] };
-
-	return res;
 }
 
 void VerticalCylinder(float radius, float height)
@@ -995,22 +1013,6 @@ float wrapAngle(float angle, float maxAngle)
 	return angle;
 }
 
-void resetCamera(void)
-{
-	angleX = angleY = 0;
-	FOVy = 60;
-	cameraPos.x = 0;
-	cameraPos.y = 2;
-	cameraPos.z = 5;
-	cameraForward.x = 0;
-	cameraForward.y = 0;
-	cameraForward.z = -1;
-	cameraForwardXZ = cameraForward;
-	cameraRight.x = 1;
-	cameraRight.y = 0;
-	cameraRight.z = 0;
-}
-
 void computeCameraVectors(void)
 {
 	float cosa, sina;
@@ -1018,11 +1020,13 @@ void computeCameraVectors(void)
 	vec3 camFacingXZ = { 0, 0, -1 };
 	vec3 temp;
 
+	// Limit camera pitch
 	if (angleX > 90)
 		angleX = 90;
 	else if (angleX < -90)
 		angleX = -90;
 
+	// Rotate the camera forward vector
 	cosa = cos(angleX * PI / 180);
 	sina = sin(angleX * PI / 180);
 	temp.x = camFacing.x;
@@ -1035,10 +1039,12 @@ void computeCameraVectors(void)
 	cameraForward.y = temp.y;
 	cameraForward.z = -sina * temp.x + cosa * temp.z;
 
+	// A projection of the camera forward vector on the XZ plane
 	cameraForwardXZ.x = cosa * camFacingXZ.x + sina * camFacingXZ.z;
 	cameraForwardXZ.y = camFacingXZ.y;
 	cameraForwardXZ.z = -sina * camFacingXZ.x + cosa * camFacingXZ.z;
 
+	// Rotate the projected forward vector 90 degrees clockwise to get a camera right vector
 	cosa = cos(-PI / 2);
 	sina = sin(-PI / 2);
 	cameraRight.x = cosa * cameraForwardXZ.x + sina * cameraForwardXZ.z;
@@ -1048,11 +1054,15 @@ void computeCameraVectors(void)
 
 void rotateAroundPoint(void)
 {
+	// Compute distance between the camera and the point on the ground the camera is looking at
 	float cosa = cos((90 - fabs(angleX)) * PI / 180);
 	float len = cameraPos.y / cosa;
 
+	// Move the camera to the point it's looking at
 	cameraPos = vec3_add(cameraPos, vec3_scale(cameraForward, len));
+	// Update camera forward vector (rotate the camera in-place)
 	computeCameraVectors();
+	// Move camera back by the same amount
 	cameraPos = vec3_sub(cameraPos, vec3_scale(cameraForward, len));
 }
 
@@ -1170,6 +1180,7 @@ void keyboardCB(unsigned char key, int x, int y)
 			cameraPos.y = 1.25;
 		glutPostRedisplay();
 		break;
+	// Disallow rotating camera around a point if the camera is looking too high
 	case 'q':
 		if (angleX > -10)
 			return;
@@ -1352,6 +1363,7 @@ void animateTimeChange(int value)
 
 	if (phase > 1 - TIME_RATE)
 		phase = 1;
+	// If animation is disabled switch daytime immediately
 	if (!animation) {
 		phase = 1;
 		transPhase = PHASE_TO_END;
