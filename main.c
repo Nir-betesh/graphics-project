@@ -7,7 +7,6 @@
 #define ANIMATION_DELAY 40
 #define CAMERA_ROTATION_SPEED 1.5f
 #define CAMERA_SPEED 0.25f
-#define CAMERA_MODEL 0
 #define CAMERA_FREE 1
 #define BALL_SPEED 0.07f
 #define CELESTIAL_SELF_SPIN 1.8f
@@ -92,8 +91,8 @@ int isBanchExist = 0, dirSwingA = 1;
 float swingAng = SWING_MAX_ANG;
 
 int FOVy = 60;
-int camera_mode = CAMERA_MODEL;
-int lighting = 1, head_light = 0, texture = 1, animation = 1;
+int camera_mode = CAMERA_FREE;
+int lighting = 1, head_light = 1, texture = 1, animation = 1;
 int sunEnable = 1, ballEnable = 1, solarEnable = 1, lampEnable = 1, signEnable = 1;
 float angleX = 0, angleY = 0, radius = 5;
 vec3 cameraPos = { 0, 3, 5 };
@@ -130,7 +129,7 @@ float droplets_offset = -90;
 
 
 // Sign, Flag, Bounce, WindSpinner, Carusel, ChainSwing, CoopSwing, SolarSys, Fountain
-const vec3 positions[9] = { {2.95, 3.25, 19.0},	{12.8, 4.0, 19.54},  {-10.4, 2.75, -7.95}, {10.31, 1.25, -0.10}, {15.34, 4.75, 12.9} , {-0.038, 2.75, -7.86} , {-6.1, 6.0, 10.0}, {13.68, 2.25, -5.65}, {-3.5, 3.25, -4.95} };
+const vec3 positions[9] = { {2.95, 3.25, 19.0},	{12.8, 4.0, 19.54},  {-8.4, 2.75, -3.95}, {6.31, 2.6, -0.10}, {15.34, 4.75, 12.9} , {-0.038, 2.75, -7.86} , {-6.1, 6.0, 10.0}, {13.68, 2.25, -5.65}, {-3.5, 3.25, -4.95} };
 const float angles_x[9] = {-15,		-16.5,	-22.5,	6,		-40.5,	-10.5,	-34.5,	-13.5,	-10.5 };
 const float angles_y[9] = { 0,	348,	15,		270,	75,		0,		108,	34.5,	216 };
 vec3 initialCameraPos;
@@ -474,10 +473,7 @@ void drawingCB(void)
 	vec3 fenceE1 = { 4.5, 0, boundery }, fenceE2 = { boundery + 0.45, 0, boundery };
 
 	//clearing the background
-	if (camera_mode == CAMERA_MODEL)
-		glClearColor(0, 0, 0, 0);
-	else
-		glClearColor(clearColor[0], clearColor[1], clearColor[2], 0.0);
+	glClearColor(clearColor[0], clearColor[1], clearColor[2], 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	//initializing modelview transformation matrix
@@ -488,34 +484,24 @@ void drawingCB(void)
 	glLightfv(LIGHT_HEAD, GL_DIFFUSE, light0Color);
 	glLightfv(LIGHT_HEAD, GL_AMBIENT, light0Ambient);
 
-	if (camera_mode == CAMERA_MODEL) {
+	if (head_light) {
 		glEnable(LIGHT_HEAD);
-		glLightf(LIGHT_HEAD, GL_QUADRATIC_ATTENUATION, 0);
-
-		glTranslatef(0, 0, -radius);
-		glRotatef(angleX, 1, 0, 0);
-		glRotatef(angleY, 0, 1, 0);
+		glLightf(LIGHT_HEAD, GL_QUADRATIC_ATTENUATION, 0.03);
 	}
-
-	if (camera_mode == CAMERA_FREE) {
-		if (head_light) {
-			glEnable(LIGHT_HEAD);
-			glLightf(LIGHT_HEAD, GL_QUADRATIC_ATTENUATION, 0.03);
-		}
-		else {
-			glDisable(LIGHT_HEAD);
-		}
-		if (angleX < -45)
-			up = cameraForwardXZ;
-		gluLookAt(cameraPos.x, cameraPos.y, cameraPos.z, center.x, center.y, center.z, up.x, up.y, up.z);
-		//printf("Pos: %f, %f, %f\t Dir: %f, %f, %f\n", cameraPos.x, cameraPos.y, cameraPos.z, cameraForward.x, cameraForward.y, cameraForward.z);
-		printf("angX: %f, angY: %f\n", angleX, angleY);
-		glPushMatrix();
-		glRotatef(sunRotation, 0, 0, -1);
-		glLightfv(LIGHT_SUN, GL_POSITION, sunPos);
-		glLightfv(LIGHT_SUN, GL_DIFFUSE, sunLightColor);
-		glPopMatrix();
+	else {
+		glDisable(LIGHT_HEAD);
 	}
+	if (angleX < -45)
+		up = cameraForwardXZ;
+	gluLookAt(cameraPos.x, cameraPos.y, cameraPos.z, center.x, center.y, center.z, up.x, up.y, up.z);
+	//printf("Pos: %f, %f, %f\t Dir: %f, %f, %f\n", cameraPos.x, cameraPos.y, cameraPos.z, cameraForward.x, cameraForward.y, cameraForward.z);
+	printf("angX: %f, angY: %f\n", angleX, angleY);
+	glPushMatrix();
+	glRotatef(sunRotation, 0, 0, -1);
+	glLightfv(LIGHT_SUN, GL_POSITION, sunPos);
+	glLightfv(LIGHT_SUN, GL_DIFFUSE, sunLightColor);
+	glPopMatrix();
+	
 
 	DrawFence(fenceA1, fenceA2, 2);
 	DrawFence(fenceB1, fenceB2, 2);
@@ -543,8 +529,9 @@ void drawingCB(void)
 
 	// Draw WindSpinner
 	glPushMatrix();
-	glTranslatef(boundery - 1, 1, 0);
+	glTranslatef(boundery - 1, 3, 0);
 	glRotatef(180, 0.0, 1.0, 0.0);
+	glScalef(2.0, 2.0, 2.0);
 	DrawWindSpinner();
 	glPopMatrix();
 
@@ -565,6 +552,7 @@ void drawingCB(void)
 	glPushMatrix();
 	glTranslatef(-boundery + 3, 1, -boundery + 3);
 	glRotatef(45, 0, 1, 0);
+	glScalef(2.0, 2.0, 2.0);	
 	drawBouncingBall();
 	glPopMatrix();
 
@@ -592,21 +580,10 @@ void drawingCB(void)
 	glTranslatef(0.0, -1, -2.0);
 	DrawStreetLight(LIGHT_STREETLAMP2);
 	glPopMatrix();
-	
-
-
-
-	//swapping buffers and displaying
-	//DrawStreetLight();
-	//DrawSquare(0.5, 0.5, 2, wood);
-	//DrawSwings();
-	//DrawStreetLight();
-	//DrawWindSpinner();
-
 
 	drawGround();
-
 	glutSwapBuffers();
+
 	//check for errors
 	er = glGetError();  //get errors. 0 for no error, find the error codes in: https://www.opengl.org/wiki/OpenGL_Error
 	if (er) printf("error: %d\n", er);
@@ -1047,21 +1024,16 @@ void resetCamera(void)
 {
 	angleX = angleY = 0;
 	FOVy = 60;
-	if (camera_mode == CAMERA_MODEL) {
-		radius = 5;
-	}
-	else if (camera_mode == CAMERA_FREE) {
-		cameraPos.x = 0;
-		cameraPos.y = 2;
-		cameraPos.z = 5;
-		cameraForward.x = 0;
-		cameraForward.y = 0;
-		cameraForward.z = -1;
-		cameraForwardXZ = cameraForward;
-		cameraRight.x = 1;
-		cameraRight.y = 0;
-		cameraRight.z = 0;
-	}
+	cameraPos.x = 0;
+	cameraPos.y = 2;
+	cameraPos.z = 5;
+	cameraForward.x = 0;
+	cameraForward.y = 0;
+	cameraForward.z = -1;
+	cameraForwardXZ = cameraForward;
+	cameraRight.x = 1;
+	cameraRight.y = 0;
+	cameraRight.z = 0;
 }
 
 void computeCameraVectors(void)
@@ -1189,16 +1161,6 @@ void keyboardCB(unsigned char key, int x, int y)
 		}
 		glutPostRedisplay();
 		break;
-	case '/':
-		camera_mode = CAMERA_MODEL;
-		resetCamera();
-		glutPostRedisplay();
-		break;
-	case '*':
-		camera_mode = CAMERA_FREE;
-		resetCamera();
-		glutPostRedisplay();
-		break;
 	case '0':
 	case '1':
 	case '2':
@@ -1315,12 +1277,8 @@ void keyboardSpecialCB(int key, int x, int y)
 	}
 
 	angleY = wrapAngle(angleY, 360);
-	if (camera_mode == CAMERA_MODEL)
-		angleX = wrapAngle(angleX, 360);
 
-	if (camera_mode == CAMERA_FREE) {
-		computeCameraVectors();
-	}
+	computeCameraVectors();
 	glutPostRedisplay();
 }
 
