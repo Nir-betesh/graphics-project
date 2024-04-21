@@ -114,8 +114,9 @@ float clearColor[] = { 135.0f / 255, 206.0f / 255, 235.0f / 255 };
 GLfloat sunLightColor[] = { 1, 1, 1, 1 };
 float sunRotation = 0;
 
-GLuint ground, groundOrig, grass, grassOrig, ball, ballOrig, wall, wallOrig, sun, sunOrig, moon, moonOrig, earth, earthOrig;
-GLuint wood, woodOrig, wood2, wood2Orig, wood2front, wood2frontOrig;
+GLuint ground, grass, ball, wall, sun, moon, earth;
+int groundTexEnable = 1, ballTexEnable = 1, solarTexEnable = 1, woodTexEnable = 1;
+GLuint wood, wood2, wood2front;
 GLuint lamp;
 GLuint metal;
 GLuint flag;
@@ -150,7 +151,6 @@ int main(int argc, char **argv)
 	glClearColor(1.0, 1.0, 1.0, 0.0);
 
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_LIGHTING);
 	glEnable(GL_NORMALIZE);
 
@@ -161,6 +161,8 @@ int main(int argc, char **argv)
 	glEnable(LIGHT_STREETLAMP3);
 	glEnable(LIGHT_SOLAR_SYSTEM_SUN);
 	glEnable(LIGHT_SUN);
+
+	glLightf(LIGHT_HEAD, GL_QUADRATIC_ATTENUATION, 0.03);
 
 	//registering callbacks
 	glutDisplayFunc(drawingCB);
@@ -186,23 +188,21 @@ int main(int argc, char **argv)
 	glutAddSubMenu("Textures", texture_menu);
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
 
-	ground = groundOrig = load_texture("ground.bmp");
-	grass = grassOrig = load_texture("grass.bmp");
-	ball = ballOrig = load_texture("tex3.bmp");
-	wall = wallOrig = load_texture("wall.bmp");
-	sun = sunOrig = load_texture("sun.bmp");
-	moon = moonOrig = load_texture("moon.bmp");
-	earth = earthOrig = load_texture("earth.bmp");
-	wood = woodOrig = load_texture("wood.bmp");
-	wood2 = wood2Orig = load_texture("wood2.bmp");
-	wood2front = wood2frontOrig = load_texture("wood2front.bmp");
+	ground = load_texture("ground.bmp");
+	grass = load_texture("grass.bmp");
+	ball = load_texture("tex3.bmp");
+	wall = load_texture("wall.bmp");
+	sun = load_texture("sun.bmp");
+	moon = load_texture("moon.bmp");
+	earth = load_texture("earth.bmp");
+	wood = load_texture("wood.bmp");
+	wood2 = load_texture("wood2.bmp");
+	wood2front = load_texture("wood2front.bmp");
 	lamp = load_texture("lamp.bmp");
 	flag = load_texture("flag.bmp");
 	water = load_texture("water.bmp");
 	metal = load_texture("metal.bmp");
 	boyFace = load_texture("boyFace.bmp");
-
-	glBindTexture(GL_TEXTURE_2D, 0);
 
 	glutTimerFunc(0, Update, 0);
 	glutTimerFunc(0, UpdateFlag, 0);
@@ -210,7 +210,7 @@ int main(int argc, char **argv)
 	glutTimerFunc(ANIMATION_DELAY, animateBouncingBall, 0);
 	glutTimerFunc(ANIMATION_DELAY, animateSolarSystem, 0);
 
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
 	//starting main loop
@@ -284,10 +284,12 @@ void resumeModulate(void)
 void drawGround(void)
 {
 	int i, j;
+	if (texture && groundTexEnable)
+		glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, ground);
 	glColor3f(0, 1, 0);
 	glNormal3f(0, 1, 0);
-	texture && ground ? Paint(1, 1, 1) : Paint(0.3, 0, 0);
+	texture && groundTexEnable ? Paint(1, 1, 1) : Paint(0.3, 0, 0);
 	for (i = -200; i < 200; i += 2) {
 		for (j = -200; j < 200; j += 2) {
 			if (i < -16 || i > 16 || j < -16 || j > 16)
@@ -306,7 +308,7 @@ void drawGround(void)
 			glEnd();
 		}
 	}
-	glBindTexture(GL_TEXTURE_2D, 0);
+	glDisable(GL_TEXTURE_2D);
 }
 
 void drawBouncingBall(void)
@@ -319,7 +321,34 @@ void drawBouncingBall(void)
 	GLUquadric *sphere = gluNewQuadric();
 	gluQuadricTexture(sphere, GL_TRUE);
 
-	texture && ball ? PaintSpec(1, 1, 1) : PaintSpec(0, 0, 0);
+	if (texture && ballTexEnable)
+		glEnable(GL_TEXTURE_2D);
+
+	if (ballPosition < -0.6)
+		scale = invLerp(-1, -0.6, ballPosition);
+	else if (ballPosition > 0.6)
+		scale = invLerp(1, 0.6, ballPosition);
+
+	glBindTexture(GL_TEXTURE_2D, ball);
+	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+
+	glPushMatrix();
+	glTranslatef(ballPosition, 0, 0);
+	glTranslatef(-translatePos * scale, 0, 0);
+	glScalef(scale, 2 - scale, 2 - scale);
+	glTranslatef(translatePos, 0, 0);
+
+	glLightfv(LIGHT_BALL, GL_POSITION, ballLight);
+	glLightfv(LIGHT_BALL, GL_DIFFUSE, ballColor);
+	glLightfv(LIGHT_BALL, GL_AMBIENT, ballAmbient);
+	glLightf(LIGHT_BALL, GL_QUADRATIC_ATTENUATION, 0.2);
+	PaintSpec(1, 0, 0);
+	gluSphere(sphere, 0.4, 30, 30);
+	gluDeleteQuadric(sphere);
+	glPopMatrix();
+	resumeModulate();
+
+	(texture && ballTexEnable) ? PaintSpec(1, 1, 1) : PaintSpec(0, 0, 0);
 	glBindTexture(GL_TEXTURE_2D, wall);
 	glBegin(GL_QUADS);
 	//glNormal3f(ballPosition + 1, -1, -1);
@@ -350,31 +379,7 @@ void drawBouncingBall(void)
 	glVertex3f(1, 1, -1);
 	glEnd();
 
-	if (ballPosition < -0.6)
-		scale = invLerp(-1, -0.6, ballPosition);
-	else if (ballPosition > 0.6)
-		scale = invLerp(1, 0.6, ballPosition);
-
-	glBindTexture(GL_TEXTURE_2D, ball);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-
-	glPushMatrix();
-	glTranslatef(ballPosition, 0, 0);
-	glTranslatef(-translatePos * scale, 0, 0);
-	glScalef(scale, 2 - scale, 2 - scale);
-	glTranslatef(translatePos, 0, 0);
-
-	glLightfv(LIGHT_BALL, GL_POSITION, ballLight);
-	glLightfv(LIGHT_BALL, GL_DIFFUSE, ballColor);
-	glLightfv(LIGHT_BALL, GL_AMBIENT, ballAmbient);
-	glLightf(LIGHT_BALL, GL_QUADRATIC_ATTENUATION, 0.2);
-	PaintSpec(1, 0, 0);
-	gluSphere(sphere, 0.4, 30, 30);
-	gluDeleteQuadric(sphere);
-	glPopMatrix();
-
-	resumeModulate();
-	glBindTexture(GL_TEXTURE_2D, 0);
+	glDisable(GL_TEXTURE_2D);
 }
 
 void drawSolarSystem(void)
@@ -389,6 +394,8 @@ void drawSolarSystem(void)
 	GLfloat light_1_ambient[] = { 0.1, 0.1, 0.1, 1.0 };
 	GLfloat light_1_position[] = { 0.0, 0.0, 0.0, 1.0 };
 
+	if (texture && solarTexEnable)
+		glEnable(GL_TEXTURE_2D);
 
 	gluQuadricTexture(sphere, GL_TRUE);
 	glColor3f(0.4, 0.4, 0.4);
@@ -413,7 +420,7 @@ void drawSolarSystem(void)
 	glPushMatrix();
 	glRotatef(earthAngle, 0, 1, 0);
 	glTranslatef(3, 0, 0);
-	glBindTexture(GL_TEXTURE_2D, 0);
+	glDisable(GL_TEXTURE_2D);
 	glPushMatrix();
 	glRotatef(90, 1, 0, 0);
 	glDisable(GL_LIGHTING);
@@ -423,6 +430,8 @@ void drawSolarSystem(void)
 		glEnable(GL_LIGHTING);
 	glPopMatrix();
 
+	if (texture && solarTexEnable)
+		glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, earth);
 	glPushMatrix();
 	glRotatef(earthSelf, -1, 1, 0);
@@ -441,7 +450,7 @@ void drawSolarSystem(void)
 	gluSphere(sphere, 0.25, 30, 30);
 	glPopMatrix();
 
-	glBindTexture(GL_TEXTURE_2D, 0);
+	glDisable(GL_TEXTURE_2D);
 	glPushMatrix();
 	glRotatef(90, 1, 0, 0);
 	glDisable(GL_LIGHTING);
@@ -462,6 +471,7 @@ void drawingCB(void)
 	GLfloat light0Color[] = { 1, 1, 1, 1 };
 	GLfloat light0Ambient[] = { 0.2, 0.2, 0.2, 1 };
 	GLfloat sunPos[] = { 0, 1, 0, 0 };
+	GLfloat sunAmbient[] = { sunLightColor[0] * 0.45, sunLightColor[1] * 0.45, sunLightColor[2] * 0.45, 1 };
 	vec3 center = vec3_add(cameraPos, cameraForward);
 	vec3 up = { 0, 1, 0 };
 	vec3 fenceA1 = { -boundery, 0, boundery }, fenceA2 = { -boundery, 0, -boundery };
@@ -482,13 +492,6 @@ void drawingCB(void)
 	glLightfv(LIGHT_HEAD, GL_DIFFUSE, light0Color);
 	glLightfv(LIGHT_HEAD, GL_AMBIENT, light0Ambient);
 
-	if (head_light) {
-		glEnable(LIGHT_HEAD);
-		glLightf(LIGHT_HEAD, GL_QUADRATIC_ATTENUATION, 0.03);
-	}
-	else {
-		glDisable(LIGHT_HEAD);
-	}
 	if (angleX < -45)
 		up = cameraForwardXZ;
 	gluLookAt(cameraPos.x, cameraPos.y, cameraPos.z, center.x, center.y, center.z, up.x, up.y, up.z);
@@ -498,14 +501,8 @@ void drawingCB(void)
 	glRotatef(sunRotation, 0, 0, -1);
 	glLightfv(LIGHT_SUN, GL_POSITION, sunPos);
 	glLightfv(LIGHT_SUN, GL_DIFFUSE, sunLightColor);
+	glLightfv(LIGHT_SUN, GL_AMBIENT, sunAmbient);
 	glPopMatrix();
-	
-
-	DrawFence(fenceA1, fenceA2, 2);
-	DrawFence(fenceB1, fenceB2, 2);
-	DrawFence(fenceC1, fenceC2, 2);
-	DrawFence(fenceD1, fenceD2, 2);
-	DrawFence(fenceE1, fenceE2, 2);
 	
 	// Draw Israel Flag
 	glPushMatrix();
@@ -548,7 +545,7 @@ void drawingCB(void)
 
 	// Draw Bouncing Ball
 	glPushMatrix();
-	glTranslatef(-boundery + 3, 1, -boundery + 3);
+	glTranslatef(-boundery + 3, 2, -boundery + 3);
 	glRotatef(45, 0, 1, 0);
 	glScalef(2.0, 2.0, 2.0);	
 	drawBouncingBall();
@@ -579,6 +576,11 @@ void drawingCB(void)
 	DrawStreetLight(LIGHT_STREETLAMP2);
 	glPopMatrix();
 
+	DrawFence(fenceA1, fenceA2, 2);
+	DrawFence(fenceB1, fenceB2, 2);
+	DrawFence(fenceC1, fenceC2, 2);
+	DrawFence(fenceD1, fenceD2, 2);
+	DrawFence(fenceE1, fenceE2, 2);
 	drawGround();
 	glutSwapBuffers();
 
@@ -660,8 +662,6 @@ void DrawFountain(void)
 	glTranslatef(0, 0.0001, 0);
 	
 	Paint(0.7843, 0.7843, 0.7843);
-	glBindTexture(GL_TEXTURE_2D, 0);
-	//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	
 	glPushMatrix();
 	glScalef(1, 3.8, 1);
@@ -677,13 +677,16 @@ void DrawFountain(void)
 	glRotatef(90, 1, 0 ,0);
 	glutSolidTorus(0.1, 0.25, 20, 20);
 	glPopMatrix();
-
-	resumeModulate();
-	glBindTexture(GL_TEXTURE_2D, 0);
-	
 	
 	///////// DROPLETS
-	texture ? PaintSpec(1, 1, 1) : PaintSpec(0, 0, 1);
+	if (texture) {
+		glEnable(GL_TEXTURE_2D);
+		PaintSpec(1, 1, 1);
+	}
+	else {
+		PaintSpec(0, 0, 1);
+	}
+	glBindTexture(GL_TEXTURE_2D, water);
 	for (i = 0; i < 10; i++) {
 		glPushMatrix();
 		glRotatef(36 * i, 0, 1, 0);
@@ -694,8 +697,6 @@ void DrawFountain(void)
 		glPopMatrix();
 	}
 	
-	glBindTexture(GL_TEXTURE_2D, water);
-	//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
 	glPushMatrix();
 	glTranslatef(0, 1, 0);
@@ -704,8 +705,7 @@ void DrawFountain(void)
 	gluDeleteQuadric(sphere);
 	glPopMatrix();
 
-	resumeModulate();
-	glBindTexture(GL_TEXTURE_2D, 0);
+	glDisable(GL_TEXTURE_2D);
 	
 	glPopMatrix();
 }
@@ -720,24 +720,22 @@ void DrawDropletsOval(void)
 
 	glPushMatrix();
 	glTranslatef(0, 2, 0);
+	if (timeOfDay == TIME_DAY)
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	for (i = droplets_offset; i < 180; i += 10) {
 		glPushMatrix();
 		glRotatef(i, 0, 0, 1);
 		glTranslatef(2, 0, 0);
 
-		glBindTexture(GL_TEXTURE_2D, water);
-		if (timeOfDay == TIME_DAY)
-			glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
 		glScalef(1, 2.5, 1);
 		gluSphere(sphere, 0.02, 10, 10);
 
-		resumeModulate();
-		glBindTexture(GL_TEXTURE_2D, 0);
 		
 		glPopMatrix();
 		
 	}
+	resumeModulate();
 
 	gluDeleteQuadric(sphere);
 
@@ -758,6 +756,8 @@ void DrawFence(vec3 fromPoint, vec3 toPoint, float poleHeight)
 	PaintSpec(232.0 / 255.0, 192.0 / 255.0, 155.0 / 255.0);
 	glPushMatrix();
 	glTranslated(fromPoint.x, fromPoint.y, fromPoint.z);
+	if (texture && woodTexEnable)
+		glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, wood);
 	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
 	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
@@ -772,6 +772,7 @@ void DrawFence(vec3 fromPoint, vec3 toPoint, float poleHeight)
 	}
 	glDisable(GL_TEXTURE_GEN_S);
 	glDisable(GL_TEXTURE_GEN_T);
+	glDisable(GL_TEXTURE_2D);
 	glPopMatrix();
 }
 
@@ -784,6 +785,8 @@ void DrawFlagPole(void)
 
 	/* 1 in */ glPushMatrix();
 	PaintSpec(232.0 / 255.0, 192.0 / 255.0, 155.0 / 255.0);
+	if (texture && woodTexEnable)
+		glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, wood);
 	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
 	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
@@ -809,6 +812,7 @@ void DrawFlagPole(void)
 	glEnd();
 
 	/* 1 out */ glPopMatrix();
+	glDisable(GL_TEXTURE_2D);
 }
 
 void DrawSign(void)
@@ -837,10 +841,9 @@ void DrawSign(void)
 
 	PaintSpec(232.0 / 255.0, 192.0 / 255.0, 155.0 / 255.0);
 
+	if (texture && woodTexEnable)
+		glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, wood2front);
-	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-	resumeModulate();
 
 	glBegin(GL_POLYGON);
 	glNormal3f(0.0, 0.0, 1.0);
@@ -849,13 +852,10 @@ void DrawSign(void)
 	glTexCoord2f(1, 1); glVertex3f(	sign_width / 2,	cylinder_height + sign_height,	0.05f);
 	glTexCoord2f(0, 1); glVertex3f(-sign_width / 2,	cylinder_height + sign_height,	0.05f);
 	glEnd();
-	glDisable(GL_TEXTURE_GEN_S);
-	glDisable(GL_TEXTURE_GEN_T);
-
 
 	glBindTexture(GL_TEXTURE_2D, wood2);
-	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
 	glEnable(GL_TEXTURE_GEN_S);
 	glEnable(GL_TEXTURE_GEN_T);
 
@@ -895,17 +895,10 @@ void DrawSign(void)
 	glVertex3f(+sign_width / 2, cylinder_height + sign_height,	-0.05f);
 	glEnd();
 
-	//disabling automatic texture coordinates generation
-	glDisable(GL_TEXTURE_GEN_S);
-	glDisable(GL_TEXTURE_GEN_T);
-
-
 	//wood posts texture
 	glBindTexture(GL_TEXTURE_2D, wood);
-	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
-	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
-	glEnable(GL_TEXTURE_GEN_S);
-	glEnable(GL_TEXTURE_GEN_T);
+	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
 
 	// left-side post
 	/* 1 in */ glPushMatrix();
@@ -945,29 +938,18 @@ void DrawSign(void)
 	glRotatef(210.0f, 1.0f, 0.0f, 0.0f);
 	VerticalCylinder(cylinder_radius * 0.6, 0.3);
 	glTranslated(0, 0.3, 0);
-	
-	glDisable(GL_TEXTURE_GEN_S);
-	glDisable(GL_TEXTURE_GEN_T);
 
 	glBindTexture(GL_TEXTURE_2D, lamp);
-	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-	glEnable(GL_TEXTURE_GEN_S);
-	glEnable(GL_TEXTURE_GEN_T);
+	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
 
 	glMaterialfv(GL_FRONT, GL_EMISSION, emission1);
 	glutSolidSphere(0.085,20,20);
 	glMaterialfv(GL_FRONT, GL_EMISSION, emission2);
-	
-	/*
-	GLfloat pos[16];
-	glGetFloatv(GL_MODELVIEW_MATRIX, pos);
-	printf("x = %f, y = %f, z = %f\n", pos[12], pos[13] ,pos[14]);
-	*/
 
 	glDisable(GL_TEXTURE_GEN_S);
 	glDisable(GL_TEXTURE_GEN_T);
-	glBindTexture(GL_TEXTURE_2D, 0);
+	glDisable(GL_TEXTURE_2D);
 
 	/* 3 out */ glPopMatrix();
 }
@@ -1112,21 +1094,16 @@ void menuCB(int value)
 		solarEnable ? glEnable(LIGHT_SOLAR_SYSTEM_SUN) : glDisable(LIGHT_SOLAR_SYSTEM_SUN);
 		break;
 	case TEXTURE_GROUND:
-		ground = ground ? 0 : groundOrig;
-		grass = grass ? 0 : grassOrig;
+		groundTexEnable = !groundTexEnable;
 		break;
 	case TEXTURE_BOUNCING_BALL:
-		ball = ball ? 0 : ballOrig;
+		ballTexEnable = !ballTexEnable;
 		break;
 	case TEXTURE_SOLAR_SYSTEM:
-		sun = sun ? 0 : sunOrig;
-		moon = moon ? 0 : moonOrig;
-		earth = earth ? 0 : earthOrig;
+		solarTexEnable = !solarTexEnable;
 		break;
 	case TEXTURE_WOOD:
-		wood = wood ? 0 : woodOrig;
-		wood2 = wood2 ? 0 : wood2Orig;
-		wood2front = wood2front ? 0 : wood2frontOrig;
+		woodTexEnable = !woodTexEnable;
 		break;
 	}
 
@@ -1219,6 +1196,7 @@ void keyboardCB(unsigned char key, int x, int y)
 		break;
 	case 'h':
 		head_light = !head_light;
+		head_light ? glEnable(LIGHT_HEAD) : glDisable(LIGHT_HEAD);
 		glutPostRedisplay();
 		break;
 	case 'c':
@@ -1571,12 +1549,13 @@ void DrawStreetLight(GLenum srcLight )
 	glLightfv(srcLight, GL_SPOT_CUTOFF, light_1_spotCutOff);
 
 	PolishedSilverColor();
-
+	if (texture)
+		glEnable(GL_TEXTURE_2D);
 	glPushMatrix();
 
 		glBindTexture(GL_TEXTURE_2D, metal);
-		glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-		glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+		glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+		glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
 		glEnable(GL_TEXTURE_GEN_S);
 		glEnable(GL_TEXTURE_GEN_T);
 
@@ -1594,8 +1573,8 @@ void DrawStreetLight(GLenum srcLight )
 		glPopMatrix();
 
 		glBindTexture(GL_TEXTURE_2D, lamp);
-		glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
-		glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+		glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+		glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
 
 		PaintSpec(232.0 / 255.0, 192.0 / 255.0, 155.0 / 255.0);
 		glMaterialfv(GL_FRONT, GL_EMISSION, emission1);
@@ -1604,10 +1583,10 @@ void DrawStreetLight(GLenum srcLight )
 
 		glDisable(GL_TEXTURE_GEN_S);
 		glDisable(GL_TEXTURE_GEN_T);
+		glDisable(GL_TEXTURE_2D);
 		gluDeleteQuadric(quadric);
 
 	glPopMatrix(); 
-	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void DrawSwings(void) 
@@ -1616,6 +1595,8 @@ void DrawSwings(void)
 	glPushMatrix();
 		glTranslated(0, -1, 0);
 
+		if (texture && woodTexEnable)
+			glEnable(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, wood);
 		PaintSpec(232.0 / 255.0, 192.0 / 255.0, 155.0 / 255.0);
 
@@ -1644,9 +1625,7 @@ void DrawSwings(void)
 			gluCylinder(quadric, 0.1, 0.1, 4.0, 32, 32);	
 			gluDeleteQuadric(quadric);
 		glPopMatrix();
-
-		glDisable(GL_TEXTURE_GEN_S);
-		glDisable(GL_TEXTURE_GEN_T);
+		glDisable(GL_TEXTURE_2D);
 
 		glPushMatrix();
 
@@ -1776,9 +1755,11 @@ void DrawSwing(void)
 	PolishedSilverColor();
 
 		// Chain Left
+	if (texture)
+		glEnable(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, metal);
-		glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-		glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+		glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+		glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
 		glEnable(GL_TEXTURE_GEN_S);
 		glEnable(GL_TEXTURE_GEN_T);
 		y = DrawChains(30);
@@ -1800,6 +1781,7 @@ void DrawSwing(void)
 		DrawChains(30);
 		glDisable(GL_TEXTURE_GEN_S);
 		glDisable(GL_TEXTURE_GEN_T);
+		glDisable(GL_TEXTURE_2D);
 
 	glPopMatrix();
 
@@ -1816,9 +1798,11 @@ void DrawHead(void)
 			glutSolidSphere(0.1, 10, 10);// neck
 			glTranslatef(0.0, 0.3, 0.0);
 			// texture of smaily
+			if (texture)
+				glEnable(GL_TEXTURE_2D);
 			glBindTexture(GL_TEXTURE_2D, boyFace);
-			glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
-			glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+			glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+			glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
 			glEnable(GL_TEXTURE_GEN_S);
 			glEnable(GL_TEXTURE_GEN_T);
 			glutSolidSphere(0.23, 10, 10);// head
@@ -1827,8 +1811,8 @@ void DrawHead(void)
 
 		glPushMatrix();
 			glBindTexture(GL_TEXTURE_2D, metal);
-			glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-			glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+			glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
+			glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
 
 			glTranslatef(0.0, 0.6, 0.0);
 			quadric = gluNewQuadric();
@@ -1838,13 +1822,14 @@ void DrawHead(void)
 			gluDeleteQuadric(quadric);
 			glDisable(GL_TEXTURE_GEN_S);
 			glDisable(GL_TEXTURE_GEN_T);
+			glDisable(GL_TEXTURE_2D);
 		glPopMatrix();
 	glPopMatrix();
 }
 
 void DrawBody(float radius, float height, int gender)
 {
-		glPushMatrix();
+	glPushMatrix();
 	GLUquadric* quadric;
 
 	if (gender) {
@@ -1854,15 +1839,13 @@ void DrawBody(float radius, float height, int gender)
 	}
 	else {
 		Paint(244.0 / 255, 186.0 / 255, 219.0 / 255);
-			quadric = gluNewQuadric();
-			gluQuadricTexture(quadric, GL_TRUE);
-			glRotatef(-90.0f, 1.0f, 0.0f, 0.0f);
-			glTranslatef(0.0, 0.0, -0.2);
-			gluCylinder(quadric, radius + 0.2, radius , height + 0.2  , 32, 32);
-			gluDeleteQuadric(quadric);
+		quadric = gluNewQuadric();
+		glRotatef(-90.0f, 1.0f, 0.0f, 0.0f);
+		glTranslatef(0.0, 0.0, -0.2);
+		gluCylinder(quadric, radius + 0.2, radius , height + 0.2  , 32, 32);
+		gluDeleteQuadric(quadric);
 	}
-		glPopMatrix();
-
+	glPopMatrix();
 }
 
 void Drawlimb(float radius, float height)
@@ -2032,7 +2015,6 @@ void DrawCoOpSwing(void)
 		glPushMatrix();
 			glTranslatef(0, -0.05, -0.4);
 			quadric = gluNewQuadric();
-			gluQuadricTexture(quadric, GL_TRUE);
 			gluCylinder(quadric, 0.1, 0.1, 1.4, 32, 32);
 			gluDeleteQuadric(quadric);
 			glutSolidSphere(0.15, 10, 10);
