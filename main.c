@@ -121,7 +121,7 @@ GLuint lamp;
 GLuint metal;
 GLuint flag;
 GLuint water;
-GLuint boyFace;
+GLuint face;
 float droop = 0.0;
 int droop_index = 0;
 float droplets_offset = -90;
@@ -202,7 +202,7 @@ int main(int argc, char **argv)
 	flag = load_texture("flag.bmp");
 	water = load_texture("water.bmp");
 	metal = load_texture("metal.bmp");
-	boyFace = load_texture("boyFace.bmp");
+	face = load_texture("face.bmp");
 
 	glutTimerFunc(0, Update, 0);
 	glutTimerFunc(0, UpdateFlag, 0);
@@ -1797,32 +1797,28 @@ void DrawHead(void)
 			glTranslatef(0.0, 0.65, 0.0);
 			glutSolidSphere(0.1, 10, 10);// neck
 			glTranslatef(0.0, 0.3, 0.0);
-			// texture of smaily
 			if (texture)
 				glEnable(GL_TEXTURE_2D);
-			glBindTexture(GL_TEXTURE_2D, boyFace);
+			glBindTexture(GL_TEXTURE_2D, face);
 			glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
 			glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
 			glEnable(GL_TEXTURE_GEN_S);
 			glEnable(GL_TEXTURE_GEN_T);
 			glutSolidSphere(0.23, 10, 10);// head
+			glDisable(GL_TEXTURE_GEN_S);
+			glDisable(GL_TEXTURE_GEN_T);
 
 		glPopMatrix();
 
 		glPushMatrix();
-			glBindTexture(GL_TEXTURE_2D, metal);
-			glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-			glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-
+			Paint(0.937, 0.894, 0.69);
+			glDisable(GL_TEXTURE_2D);
 			glTranslatef(0.0, 0.6, 0.0);
 			quadric = gluNewQuadric();
-			gluQuadricTexture(quadric, GL_TRUE);
 			glRotatef(-90.0f, 1.0f, 0.0f, 0.0f);
 			gluCylinder(quadric, 0.25, 0.05, 0.1, 32, 32);
 			gluDeleteQuadric(quadric);
-			glDisable(GL_TEXTURE_GEN_S);
-			glDisable(GL_TEXTURE_GEN_T);
-			glDisable(GL_TEXTURE_2D);
+			
 		glPopMatrix();
 	glPopMatrix();
 }
@@ -1853,7 +1849,7 @@ void Drawlimb(float radius, float height)
 	GLUquadric* quadric;
 	//draw pill shaped limb in the pos Z direction
 	glPushMatrix();
-		Paint(236.0 / 255, 174.0 / 255, 131.0 / 255);
+		Paint(0.937, 0.894, 0.69);
 		quadric = gluNewQuadric();
 		gluCylinder(quadric, radius, radius, height, 32, 32);
 		gluDeleteQuadric(quadric);
@@ -1871,7 +1867,7 @@ void DrawLeg(int gender, int isAnim)
 	float shockLength = 0.55;
 	float footLength = 0.2;
 	glPushMatrix();
-		Paint(236.0 / 255, 174.0 / 255, 131.0 / 255);
+		Paint(0.937, 0.894, 0.69);
 		//theigh
 		Drawlimb(0.12, thighLength);
 		glTranslatef(0 ,0, thighLength);
@@ -1897,7 +1893,7 @@ void DrawArm(void)
 	float armLenght = 0.5;
 
 	glPushMatrix();
-		Paint(236.0 / 255, 174.0 / 255, 131.0 / 255);
+		Paint(0.937, 0.894, 0.69);
 		glutSolidSphere(0.13, 10, 10); // Shoulder
 		Drawlimb(0.1, armLenght);
 		glTranslatef(0.0, 0.0, armLenght);
