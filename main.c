@@ -6,8 +6,8 @@
 // Constant definitions
 #define PI 3.14159265359f
 #define ANIMATION_DELAY 40
-#define CAMERA_ROTATION_SPEED 1.5f
-#define CAMERA_SPEED 0.25f
+#define CAMERA_ROTATION_SPEED 1.8f
+#define CAMERA_SPEED 0.30f
 #define BALL_SPEED 0.07f
 #define CELESTIAL_SELF_SPIN 1.8f
 #define CELESTIAL_SPIN 1.2f
@@ -96,7 +96,7 @@ int FOVy = 60;
 int lighting = 1, head_light = 0, texture = 1, animation = 1;
 int sunEnable = 1, ballEnable = 1, solarEnable = 1, lampEnable = 1, signEnable = 1;
 float angleX = 0, angleY = 0, radius = 5;
-vec3 cameraPos = { 0, 3, 5 };
+vec3 cameraPos = { 0, 2.5, 30 };
 vec3 cameraForward = { 0, 0, -1 };
 vec3 cameraForwardXZ = { 0, 0, -1 };
 vec3 cameraRight = { 1, 0, 0 };
@@ -209,9 +209,9 @@ int main(int argc, char **argv)
 	metal = load_texture("metal.bmp");
 	face = load_texture("face.bmp");
 
-	glutTimerFunc(0, Update, 0);
-	glutTimerFunc(0, UpdateFlag, 0);
-	glutTimerFunc(0, UpdateDroplets, 0);
+	glutTimerFunc(ANIMATION_DELAY, Update, 0);
+	glutTimerFunc(ANIMATION_DELAY, UpdateFlag, 0);
+	glutTimerFunc(ANIMATION_DELAY, UpdateDroplets, 0);
 	glutTimerFunc(ANIMATION_DELAY, animateBouncingBall, 0);
 	glutTimerFunc(ANIMATION_DELAY, animateSolarSystem, 0);
 
@@ -1401,7 +1401,7 @@ void UpdateFlag(int value)
 	droop = droop_values[droop_index];
 	droop_index++;
 	droop_index = droop_index == 16 ? 0 : droop_index;
-	glutTimerFunc(64, UpdateFlag, 0);
+	glutTimerFunc(ANIMATION_DELAY, UpdateFlag, 0);
 	glutPostRedisplay();
 }
 
@@ -1414,7 +1414,7 @@ void UpdateDroplets(int value)
 	if (droplets_offset <= -100) {
 		droplets_offset = -90;
 	}
-	glutTimerFunc(16, UpdateDroplets, 0);
+	glutTimerFunc(ANIMATION_DELAY, UpdateDroplets, 0);
 	glutPostRedisplay();
 }
 
@@ -1938,7 +1938,7 @@ void Update(int value)
 	}
 
 	glutPostRedisplay();
-	glutTimerFunc(16, Update, 0); // ~60 FPS
+	glutTimerFunc(ANIMATION_DELAY, Update, 0);
 }
 
 void DrawSquare(float xLen, float yLen, float zLen)
