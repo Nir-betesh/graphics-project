@@ -5,6 +5,7 @@
 
 #define PI 3.14159265359f
 #define ANIMATION_DELAY 40
+#define SIXTY_FPS 16
 #define CAMERA_ROTATION_SPEED 1.5f
 #define CAMERA_SPEED 0.25f
 #define CAMERA_FREE 1
@@ -50,29 +51,29 @@ GLubyte* readBMP(char* imagepath, int* width, int* height);
 void TerminationErrorFunc(char* ErrorString);
 GLuint load_texture(char* name);
 void VerticalCylinder(float radius, float height);
-void DrawSign(void);
-void DrawWindSpinner(void);
+void drawSign(void);
+void drawWindSpinner(void);
 void DrawSpinner(void);
-void DrawBlade(void);
-void Update(int value);
-void DrawStreetLight(GLenum srcLight);
-void DrawSwings(void);
-void DrawSwing(void);
-void DrawFence(vec3 fromPoint, vec3 toPoint, float poleHeight);
-void DrawFlagPole(void);
-void UpdateFlag(int value);
-void DrawFountain(void);
-void DrawDropletsOval(void);
-void UpdateDroplets(int value);
+void drawBlade(void);
+//void Update(int value);
+void drawStreetLight(GLenum srcLight);
+void drawSwings(void);
+void drawSwing(void);
+void drawFence(vec3 fromPoint, vec3 toPoint, float poleHeight);
+void drawFlagPole(void);
+void animateFlag(int value);
+void drawFountain(void);
+void drawDropletsOval(void);
+void animateDroplets(int value);
 float DrawChains(int length);
 float lerp(float a, float b, float t);
 float invLerp(float a, float b, float c);
-void DrawSwingKid(int gender);
+void drawSwingKid(int gender);
 void DrawHead(void);
 void DrawArm(void);
 void Drawlimb(float radius, float height);
 void DrawLeg(int gender, int isAnim);
-void DrawCarousel(void);
+void drawCarousel(void);
 void DrawBody(float radius, float height, int gender);
 void DrawSquare(float xLen, float yLen, float zLen);
 void DrawCoOpSwing(void);
@@ -85,6 +86,10 @@ void RubyColor(void);
 void EmeraldColor(void);
 void DrawCaruselKid(int gender);
 void animateCamera(int value);
+void animateSwingKids(int value);
+void animateWindSpinner(int value);
+void animateCoOpSwing(int value);
+void computeCameraVectors(void);
 
 float time = 0;
 int isBanchExist = 0, dirSwingA = 1;
@@ -171,6 +176,8 @@ int main(int argc, char** argv)
 	glutKeyboardFunc(keyboardCB);
 	glutSpecialFunc(keyboardSpecialCB);
 
+	// Start Position
+
 	texture_menu = glutCreateMenu(menuCB);
 	glutAddMenuEntry("Toggle ground texture", TEXTURE_GROUND);
 	glutAddMenuEntry("Toggle bouncing ball textures", TEXTURE_BOUNCING_BALL);
@@ -208,9 +215,11 @@ int main(int argc, char** argv)
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	glutTimerFunc(0, Update, 0);
-	glutTimerFunc(0, UpdateFlag, 0);
-	glutTimerFunc(0, UpdateDroplets, 0);
+	glutTimerFunc(0, animateFlag, 0);
+	glutTimerFunc(0, animateDroplets, 0);
+	glutTimerFunc(0, animateSwingKids, 0);
+	glutTimerFunc(0, animateWindSpinner, 0);
+	glutTimerFunc(0, animateCoOpSwing, 0);
 	glutTimerFunc(ANIMATION_DELAY, animateBouncingBall, 0);
 	glutTimerFunc(ANIMATION_DELAY, animateSolarSystem, 0);
 
@@ -220,6 +229,219 @@ int main(int argc, char** argv)
 	//starting main loop
 	glutMainLoop();
 
+}
+
+void animateBouncingBall(int value)
+{
+	if (!animation)
+		return;
+
+	ballPosition += dxBall;
+
+	if (ballPosition >= 0.9) {
+		ballPosition = 0.9;
+		dxBall = -dxBall;
+	}
+	else if (ballPosition <= -0.9) {
+		ballPosition = -0.9;
+		dxBall = -dxBall;
+	}
+
+	glutPostRedisplay();
+	glutTimerFunc(ANIMATION_DELAY, animateBouncingBall, 0);
+}
+
+void animateCamera(int value)
+{
+	const float step = 0.02;
+	if (!animation)
+		return;
+
+	if (camera_phaze > 1 - step)
+		camera_phaze = 1;
+
+	cameraPos.x = lerp(initialCameraPos.x, positions[selected_model].x, camera_phaze);
+	cameraPos.y = lerp(initialCameraPos.y, positions[selected_model].y, camera_phaze);
+	cameraPos.z = lerp(initialCameraPos.z, positions[selected_model].z, camera_phaze);
+
+	angleX = lerp(initialAngleX, angles_x[selected_model], camera_phaze);
+	angleY = lerp(initialAngleY, angles_y[selected_model], camera_phaze);
+	computeCameraVectors();
+	glutPostRedisplay();
+
+	camera_phaze += step;
+	if (camera_phaze >= 1) {
+		camera_phaze = 0;
+		return;
+	}
+	glutTimerFunc(ANIMATION_DELAY, animateCamera, 0);
+}
+
+void animateCoOpSwing(int value)
+{
+	if (!animation)
+		return;
+
+	float length = 0.8;
+	float time_period = 2 * PI * sqrt(length / 9.81);
+
+	if (coOpSwingAng == 18 && isUp) {
+		isUp = !isUp;
+	}
+	else if (coOpSwingAng == -18 && !isUp) {
+		isUp = !isUp;
+	}
+	isUp ? (coOpSwingAng += 0.5) : (coOpSwingAng -= 0.5);
+
+	if (time >= time_period) {
+		time = 0;
+	}
+
+	glutPostRedisplay();
+	glutTimerFunc(16, animateCoOpSwing, 0); // ~60 FPS
+}
+
+void animateDroplets(int value)
+{
+	if (!animation)
+		return;
+
+	droplets_offset--;
+	if (droplets_offset <= -100) {
+		droplets_offset = -90;
+	}
+	glutTimerFunc(16, animateDroplets, 0);
+	glutPostRedisplay();
+}
+
+void animateFlag(int value)
+{
+	if (!animation)
+		return;
+
+	float droop_values[16] = { 0.005, 0.01, 0.02, 0.03, 0.05, 0.07, 0.09, 0.11, 0.12,
+							0.11, 0.09, 0.07, 0.05, 0.03, 0.02, 0.01 }; // 16
+	droop = droop_values[droop_index];
+	droop_index++;
+	droop_index = droop_index == 16 ? 0 : droop_index;
+	glutTimerFunc(64, animateFlag, 0);
+	glutPostRedisplay();
+}
+
+void animateTimeChange(int value)
+{
+	float day[] = { 135.0f / 255, 206.0f / 255, 235.0f / 255 };
+	float twilight[] = { 218.0f / 255, 91.0f / 255, 20.0f / 255 };
+	float night[] = { 19.0f / 255, 24.0f / 255, 98.0f / 255 };
+	GLfloat sunlight[] = { 1, 1, 1, 1 };
+	GLfloat nightlight[] = { 0, 0, 0, 1 };
+	float* from, * to, fromAngle, toAngle;
+	GLfloat* fromLight, * toLight;
+
+	if (timeOfDay == TIME_NIGHT) {
+		if (transPhase == PHASE_TO_TWILIGHT && animation) {
+			from = day;
+			fromLight = sunlight;
+			fromAngle = 0;
+			to = twilight;
+			toLight = twilight;
+			toAngle = 45;
+		}
+		else {
+			from = twilight;
+			fromLight = twilight;
+			fromAngle = 45;
+			to = night;
+			toLight = nightlight;
+			toAngle = 90;
+		}
+	}
+	else {
+		if (transPhase == PHASE_TO_TWILIGHT && animation) {
+			from = night;
+			fromLight = nightlight;
+			fromAngle = -90;
+			to = twilight;
+			toLight = twilight;
+			toAngle = -45;
+		}
+		else {
+			from = twilight;
+			fromLight = twilight;
+			fromAngle = -45;
+			to = day;
+			toLight = sunlight;
+			toAngle = 0;
+		}
+	}
+
+	if (phase > 1 - TIME_RATE)
+		phase = 1;
+	if (!animation) {
+		phase = 1;
+		transPhase = PHASE_TO_END;
+	}
+	clearColor[0] = lerp(from[0], to[0], phase);
+	clearColor[1] = lerp(from[1], to[1], phase);
+	clearColor[2] = lerp(from[2], to[2], phase);
+	sunLightColor[0] = lerp(fromLight[0], toLight[0], phase);
+	sunLightColor[1] = lerp(fromLight[1], toLight[1], phase);
+	sunLightColor[2] = lerp(fromLight[2], toLight[2], phase);
+	sunRotation = lerp(fromAngle, toAngle, phase);
+	glutPostRedisplay();
+
+	phase += TIME_RATE;
+	if (phase >= 1) {
+		phase = 0;
+		if (transPhase == PHASE_TO_END) {
+			transPhase = PHASE_END;
+			return;
+		}
+		else {
+			transPhase = PHASE_TO_END;
+		}
+	}
+	glutTimerFunc(ANIMATION_DELAY, animateTimeChange, value);
+}
+
+void animateWindSpinner(int value)
+{
+	if (!animation)
+		return;
+
+	rotationAngle += 2.0f; // Adjust rotation speed as needed
+	rotationAngle = wrapAngle(rotationAngle, 360.0);
+
+	glutPostRedisplay();
+	glutTimerFunc(SIXTY_FPS, animateWindSpinner, 0); // ~60 FPS
+}
+
+void animateSolarSystem(int value)
+{
+	if (!animation)
+		return;
+
+	sunSelf = wrapAngle(sunSelf + CELESTIAL_SELF_SPIN, 360);
+	earthSelf = wrapAngle(earthSelf + CELESTIAL_SELF_SPIN, 360);
+	earthAngle = wrapAngle(earthAngle + CELESTIAL_SPIN, 360);
+	moonAngle = wrapAngle(moonAngle + CELESTIAL_SPIN, 360);
+	glutPostRedisplay();
+	glutTimerFunc(ANIMATION_DELAY, animateSolarSystem, 0);
+}
+
+void animateSwingKids(int value)
+{
+	if (!animation)
+		return;
+	float length = 0.8;
+	double omega = sqrt(9.81 / length);
+
+	jointAngLeg = abs(90 * cos(omega * time));
+	time += 16 * 0.001f;
+	swingAng = SWING_MAX_ANG * cos(omega * time);
+
+	glutPostRedisplay();
+	glutTimerFunc(SIXTY_FPS, animateSwingKids, 0); // ~60 FPS
 }
 
 GLuint load_texture(char* name)
@@ -474,11 +696,14 @@ void drawingCB(void)
 	vec3 fenceD1 = { -boundery, 0, boundery }, fenceD2 = { -2, 0, boundery };
 	vec3 fenceE1 = { 4.5, 0, boundery }, fenceE2 = { boundery + 0.45, 0, boundery };
 
-	//clearing the background
+	// Set initial position
+	//gluLookAt(positions[0].x, positions[0].y - 3.5, positions[0].z - 6, 3.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+	gluLookAt( 2.95, -0.6, 13.0 , 3.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+	// Clearing the background
 	glClearColor(clearColor[0], clearColor[1], clearColor[2], 0.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	//initializing modelview transformation matrix
+	// Initializing modelview transformation matrix
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
@@ -502,28 +727,28 @@ void drawingCB(void)
 	glLightfv(LIGHT_SUN, GL_DIFFUSE, sunLightColor);
 	glPopMatrix();
 
-	DrawFence(fenceA1, fenceA2, 2);
-	DrawFence(fenceB1, fenceB2, 2);
-	DrawFence(fenceC1, fenceC2, 2);
-	DrawFence(fenceD1, fenceD2, 2);
-	DrawFence(fenceE1, fenceE2, 2);
+	drawFence(fenceA1, fenceA2, 2);
+	drawFence(fenceB1, fenceB2, 2);
+	drawFence(fenceC1, fenceC2, 2);
+	drawFence(fenceD1, fenceD2, 2);
+	drawFence(fenceE1, fenceE2, 2);
 
 	// Draw Israel Flag
 	glPushMatrix();
 	glTranslatef(boundery, 0, boundery);
-	DrawFlagPole();
+	drawFlagPole();
 	glPopMatrix();
 
 	// Draw Israel Flag
 	glPushMatrix();
 	glTranslatef(-boundery, 0, boundery);
-	DrawFlagPole();
+	drawFlagPole();
 	glPopMatrix();
 
 	// Draw Sign
 	glPushMatrix();
 	glTranslatef(3, 0, boundery);
-	DrawSign();
+	drawSign();
 	glPopMatrix();
 
 	// Draw WindSpinner
@@ -531,20 +756,20 @@ void drawingCB(void)
 	glTranslatef(boundery - 1, 3, 0);
 	glRotatef(180, 0.0, 1.0, 0.0);
 	glScalef(2.0, 2.0, 2.0);
-	DrawWindSpinner();
+	drawWindSpinner();
 	glPopMatrix();
 
 	// Draw Fountain
 	glPushMatrix();
-	DrawFountain();
+	drawFountain();
 	glPopMatrix();
 
 	// Draw Swings
 	glPushMatrix();
 	glTranslatef(0.0, 1.0, -boundery + 3.0);
-	DrawSwings();
+	drawSwings();
 	glTranslatef(0.0, -1.0, -1.5);
-	DrawStreetLight(LIGHT_STREETLAMP3);
+	drawStreetLight(LIGHT_STREETLAMP3);
 	glPopMatrix();
 
 	// Draw Bouncing Ball
@@ -564,10 +789,10 @@ void drawingCB(void)
 	// Draw Carousel
 	glPushMatrix();
 	glTranslatef(boundery - 4, 0.0, boundery - 4);
-	DrawCarousel();
+	drawCarousel();
 	glTranslatef(2, 0, 2.8);
 	glRotatef(200, 0.0, 1.0, 0.0);
-	DrawStreetLight(LIGHT_STREETLAMP1);
+	drawStreetLight(LIGHT_STREETLAMP1);
 	glPopMatrix();
 
 	// Draw Co-Op Swing 
@@ -577,18 +802,18 @@ void drawingCB(void)
 	DrawCoOpSwing();
 	glRotatef(180, 0, 1, 0);
 	glTranslatef(0.0, -1, -2.0);
-	DrawStreetLight(LIGHT_STREETLAMP2);
+	drawStreetLight(LIGHT_STREETLAMP2);
 	glPopMatrix();
 
 	drawGround();
 	glutSwapBuffers();
 
-	//check for errors
+	// Check for errors
 	er = glGetError();  //get errors. 0 for no error, find the error codes in: https://www.opengl.org/wiki/OpenGL_Error
 	if (er) printf("error: %d\n", er);
 }
 
-void DrawCarousel(void)
+void drawCarousel(void)
 {
 	int i;
 
@@ -648,11 +873,11 @@ void DrawCarousel(void)
 	glPopMatrix();
 
 
-	//DrawSwingKid(1);
+	//drawSwingKid(1);
 	glPopMatrix();
 }
 
-void DrawFountain(void)
+void drawFountain(void)
 {
 	int i;
 	GLUquadric* sphere = gluNewQuadric();
@@ -690,7 +915,7 @@ void DrawFountain(void)
 		glRotatef(36 * i, 0, 1, 0);
 		glTranslatef(1, 0, 0);
 		glScalef(0.5, 1, 1);
-		DrawDropletsOval();
+		drawDropletsOval();
 
 		glPopMatrix();
 	}
@@ -711,7 +936,7 @@ void DrawFountain(void)
 	glPopMatrix();
 }
 
-void DrawDropletsOval(void)
+void drawDropletsOval(void)
 {
 	float raius = 1;
 	float scale = 0.3;
@@ -745,7 +970,7 @@ void DrawDropletsOval(void)
 	glPopMatrix();
 }
 
-void DrawFence(vec3 fromPoint, vec3 toPoint, float poleHeight)
+void drawFence(vec3 fromPoint, vec3 toPoint, float poleHeight)
 {
 	float poleDistance = 0.4f;
 	float poleRadius = 0.1f;
@@ -776,7 +1001,7 @@ void DrawFence(vec3 fromPoint, vec3 toPoint, float poleHeight)
 	glPopMatrix();
 }
 
-void DrawFlagPole(void)
+void drawFlagPole(void)
 {
 	float poleRadius = 0.1f;
 	float poleHeight = 4.5;
@@ -812,7 +1037,7 @@ void DrawFlagPole(void)
 	/* 1 out */ glPopMatrix();
 }
 
-void DrawSign(void)
+void drawSign(void)
 {
 	float sign_width = 2;
 	float sign_height = 2;
@@ -1248,9 +1473,11 @@ void keyboardCB(unsigned char key, int x, int y)
 	case 'n':
 		animation = !animation;
 		if (animation) {
-			glutTimerFunc(0, Update, 0);
-			glutTimerFunc(0, UpdateFlag, 0);
-			glutTimerFunc(0, UpdateDroplets, 0);
+			glutTimerFunc(0, animateSwingKids, 0);
+			glutTimerFunc(0, animateWindSpinner, 0);
+			glutTimerFunc(0, animateCoOpSwing, 0);
+			glutTimerFunc(0, animateFlag, 0);
+			glutTimerFunc(0, animateDroplets, 0);
 			glutTimerFunc(ANIMATION_DELAY, animateBouncingBall, 0);
 			glutTimerFunc(ANIMATION_DELAY, animateSolarSystem, 0);
 		}
@@ -1278,169 +1505,6 @@ void keyboardSpecialCB(int key, int x, int y)
 	angleY = wrapAngle(angleY, 360);
 
 	computeCameraVectors();
-	glutPostRedisplay();
-}
-
-void animateCamera(int value)
-{
-	const float step = 0.02;
-	if (!animation)
-		return;
-
-	if (camera_phaze > 1 - step)
-		camera_phaze = 1;
-
-	cameraPos.x = lerp(initialCameraPos.x, positions[selected_model].x, camera_phaze);
-	cameraPos.y = lerp(initialCameraPos.y, positions[selected_model].y, camera_phaze);
-	cameraPos.z = lerp(initialCameraPos.z, positions[selected_model].z, camera_phaze);
-
-	angleX = lerp(initialAngleX, angles_x[selected_model], camera_phaze);
-	angleY = lerp(initialAngleY, angles_y[selected_model], camera_phaze);
-	computeCameraVectors();
-	glutPostRedisplay();
-
-	camera_phaze += step;
-	if (camera_phaze >= 1) {
-		camera_phaze = 0;
-		return;
-	}
-	glutTimerFunc(ANIMATION_DELAY, animateCamera, 0);
-}
-
-void animateBouncingBall(int value)
-{
-	if (!animation)
-		return;
-
-	ballPosition += dxBall;
-
-	if (ballPosition >= 0.9) {
-		ballPosition = 0.9;
-		dxBall = -dxBall;
-	}
-	else if (ballPosition <= -0.9) {
-		ballPosition = -0.9;
-		dxBall = -dxBall;
-	}
-
-	glutPostRedisplay();
-	glutTimerFunc(ANIMATION_DELAY, animateBouncingBall, 0);
-}
-
-void animateSolarSystem(int value)
-{
-	if (!animation)
-		return;
-
-	sunSelf = wrapAngle(sunSelf + CELESTIAL_SELF_SPIN, 360);
-	earthSelf = wrapAngle(earthSelf + CELESTIAL_SELF_SPIN, 360);
-	moonSelf = wrapAngle(moonSelf + CELESTIAL_SELF_SPIN, 360);
-	earthAngle = wrapAngle(earthAngle + CELESTIAL_SPIN, 360);
-	moonAngle = wrapAngle(moonAngle + CELESTIAL_SPIN, 360);
-	glutPostRedisplay();
-	glutTimerFunc(ANIMATION_DELAY, animateSolarSystem, 0);
-}
-
-void animateTimeChange(int value)
-{
-	float day[] = { 135.0f / 255, 206.0f / 255, 235.0f / 255 };
-	float twilight[] = { 218.0f / 255, 91.0f / 255, 20.0f / 255 };
-	float night[] = { 19.0f / 255, 24.0f / 255, 98.0f / 255 };
-	GLfloat sunlight[] = { 1, 1, 1, 1 };
-	GLfloat nightlight[] = { 0, 0, 0, 1 };
-	float* from, * to, fromAngle, toAngle;
-	GLfloat* fromLight, * toLight;
-
-	if (timeOfDay == TIME_NIGHT) {
-		if (transPhase == PHASE_TO_TWILIGHT && animation) {
-			from = day;
-			fromLight = sunlight;
-			fromAngle = 0;
-			to = twilight;
-			toLight = twilight;
-			toAngle = 45;
-		}
-		else {
-			from = twilight;
-			fromLight = twilight;
-			fromAngle = 45;
-			to = night;
-			toLight = nightlight;
-			toAngle = 90;
-		}
-	}
-	else {
-		if (transPhase == PHASE_TO_TWILIGHT && animation) {
-			from = night;
-			fromLight = nightlight;
-			fromAngle = -90;
-			to = twilight;
-			toLight = twilight;
-			toAngle = -45;
-		}
-		else {
-			from = twilight;
-			fromLight = twilight;
-			fromAngle = -45;
-			to = day;
-			toLight = sunlight;
-			toAngle = 0;
-		}
-	}
-
-	if (phase > 1 - TIME_RATE)
-		phase = 1;
-	if (!animation) {
-		phase = 1;
-		transPhase = PHASE_TO_END;
-	}
-	clearColor[0] = lerp(from[0], to[0], phase);
-	clearColor[1] = lerp(from[1], to[1], phase);
-	clearColor[2] = lerp(from[2], to[2], phase);
-	sunLightColor[0] = lerp(fromLight[0], toLight[0], phase);
-	sunLightColor[1] = lerp(fromLight[1], toLight[1], phase);
-	sunLightColor[2] = lerp(fromLight[2], toLight[2], phase);
-	sunRotation = lerp(fromAngle, toAngle, phase);
-	glutPostRedisplay();
-
-	phase += TIME_RATE;
-	if (phase >= 1) {
-		phase = 0;
-		if (transPhase == PHASE_TO_END) {
-			transPhase = PHASE_END;
-			return;
-		}
-		else {
-			transPhase = PHASE_TO_END;
-		}
-	}
-	glutTimerFunc(ANIMATION_DELAY, animateTimeChange, value);
-}
-
-void UpdateFlag(int value)
-{
-	if (!animation)
-		return;
-
-	float droop_values[16] = { 0.005, 0.01, 0.02, 0.03, 0.05, 0.07, 0.09, 0.11, 0.12,
-							0.11, 0.09, 0.07, 0.05, 0.03, 0.02, 0.01 }; // 16
-	droop = droop_values[droop_index];
-	droop_index++;
-	droop_index = droop_index == 16 ? 0 : droop_index;
-	glutTimerFunc(64, UpdateFlag, 0);
-	glutPostRedisplay();
-}
-
-void UpdateDroplets(int value)
-{
-	if (!animation)
-		return;
-
-	droplets_offset--;
-	if (droplets_offset <= -100) {
-		droplets_offset = -90;
-	}
-	glutTimerFunc(16, UpdateDroplets, 0);
 	glutPostRedisplay();
 }
 
@@ -1523,7 +1587,7 @@ void TerminationErrorFunc(char* ErrorString)
 	exit(0);
 }
 
-void DrawWindSpinner(void)
+void drawWindSpinner(void)
 {
 	float CylinderHeight = 3.0f;
 	float CylinderRadius = 0.1f;
@@ -1559,7 +1623,7 @@ void DrawWindSpinner(void)
 	glPopMatrix();
 }
 
-void DrawStreetLight(GLenum srcLight)
+void drawStreetLight(GLenum srcLight)
 {
 	GLUquadric* quadric;
 	quadric = gluNewQuadric();
@@ -1621,7 +1685,7 @@ void DrawStreetLight(GLenum srcLight)
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void DrawSwings(void)
+void drawSwings(void)
 {
 	GLUquadric* quadric;
 	glPushMatrix();
@@ -1667,20 +1731,20 @@ void DrawSwings(void)
 	glPushMatrix();
 	glTranslated(-1.5, 0, 0);
 	glRotatef(swingAng, 1, 0, 0);
-	DrawSwing();
+	drawSwing();
 	glTranslatef(0.5, -1.85, 0);
 	glScalef(0.9, 0.9, 0.9);
-	DrawSwingKid(0); // Draw girl on swing
+	drawSwingKid(0); // Draw girl on swing
 	glPopMatrix();
 
 	// Draw Swing Right
 	glPushMatrix();
 	glTranslated(0.5, 0, 0);
 	glRotatef(-swingAng, 1, 0, 0);
-	DrawSwing();
+	drawSwing();
 	glTranslatef(0.5, -1.85, 0);
 	glScalef(0.9, 0.9, 0.9);
-	DrawSwingKid(1); // Draw boy on swing
+	drawSwingKid(1); // Draw boy on swing
 	glPopMatrix();
 
 	glPopMatrix();
@@ -1688,8 +1752,7 @@ void DrawSwings(void)
 	glPopMatrix();
 }
 
-
-void DrawBlade(void)
+void drawBlade(void)
 {
 	glPushMatrix();
 	glTranslated(0, 0, -1);
@@ -1706,7 +1769,7 @@ void DrawSpinner(void)
 	// Draw the wind spinner blades
 	for (i = 0; i < 6; ++i) {
 		glRotatef(60.0, 1.0, 0.0, 0.0);
-		DrawBlade();
+		drawBlade();
 	}
 
 	glPopMatrix();
@@ -1738,7 +1801,7 @@ float DrawChains(int length)
 	return y;
 }
 
-void DrawSwing(void)
+void drawSwing(void)
 {
 	float y;
 
@@ -1904,38 +1967,8 @@ void DrawArm(void)
 	glPopMatrix();
 }
 
-void Update(int value)
-{
-	if (!animation)
-		return;
 
-	float length = 0.8;
-	double omega = sqrt(9.81 / length);
-	float time_period = 2 * PI * sqrt(length / 9.81);
-	int isForward = 1;
 
-	rotationAngle += 2.0f; // Adjust rotation speed as needed
-	rotationAngle = wrapAngle(rotationAngle, 360.0);
-
-	time += 16 * 0.001f;
-	swingAng = SWING_MAX_ANG * cos(omega * time);
-	jointAngLeg = abs(90 * cos(omega * time));
-
-	if (coOpSwingAng == 18 && isUp) {
-		isUp = !isUp;
-	}
-	else if (coOpSwingAng == -18 && !isUp) {
-		isUp = !isUp;
-	}
-	isUp ? (coOpSwingAng += 0.5) : (coOpSwingAng -= 0.5);
-
-	if (time >= time_period) {
-		time = 0;
-	}
-
-	glutPostRedisplay();
-	glutTimerFunc(16, Update, 0); // ~60 FPS
-}
 
 void DrawSquare(float xLen, float yLen, float zLen)
 {
@@ -2078,7 +2111,7 @@ void DrawCoOpSwing(void)
 
 }
 
-void DrawSwingKid(int gender)
+void drawSwingKid(int gender)
 {
 	vec3 legPos = { 0.14, -0.1, 0.0 };
 	vec3 armPos = { 0.23, 0.5, 0.0 };
