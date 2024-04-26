@@ -1911,7 +1911,7 @@ void DrawBody(float radius, float height, int gender)
 		glutSolidSphere(0.25, 10, 10);
 	}
 	else {
-		Paint(244.0 / 255, 186.0 / 255, 219.0 / 255);
+		Paint(1.0, 0.0, 1.0);
 		quadric = gluNewQuadric();
 		glRotatef(-90.0f, 1.0f, 0.0f, 0.0f);
 		glTranslatef(0.0, 0.0, -0.2);
