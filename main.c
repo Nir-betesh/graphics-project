@@ -39,45 +39,48 @@ typedef struct {
 } vec3;
 
 //function declerations
+void animateBouncingBall(int value);
+void animateCamera(int value);
+void animateCoOpSwing(int value);
+void animateDroplets(int value);
+void animateFlag(int value);
+void animateWindSpinnerAndCarusel(int value);
+void animateSolarSystem(int value);
+void animateSwingKids(int value);
+void animateTimeChange(int value);
+float DrawChains(int length);
+void DrawSwingKid(int gender);
+void DrawHead(void);
+void DrawArm(void);
+void Drawlimb(float radius, float height);
+void DrawLeg(int gender, int isAnim);
+void DrawCarousel(void);
+void DrawBody(float radius, float height, int gender);
+void DrawSquare(float xLen, float yLen, float zLen);
+void DrawCoOpSwing(void);
+void DrawCoOpSwingKid(int gender);
+void DrawSign(void);
+void DrawWindSpinner(void);
+void DrawSpinner(void);
+void DrawBlade(void);
+void DrawStreetLight(GLenum srcLight);
+void DrawSwings(void);
+void DrawSwing(void);
+void DrawFence(vec3 fromPoint, vec3 toPoint, float poleHeight);
+void DrawFlagPole(void);
+void DrawFountain(void);
+void DrawDropletsOval(void);
 void drawingCB(void);
 void reshapeCB(int width, int height);
 void keyboardCB(unsigned char key, int x, int y);
 void keyboardSpecialCB(int key, int x, int y);
 void menuCB(int value);
-void animateBouncingBall(int value);
-void animateSolarSystem(int value);
-void animateTimeChange(int value);
 GLubyte* readBMP(char* imagepath, int* width, int* height);
 void TerminationErrorFunc(char* ErrorString);
 GLuint load_texture(char* name);
 void VerticalCylinder(float radius, float height);
-void drawSign(void);
-void drawWindSpinner(void);
-void DrawSpinner(void);
-void drawBlade(void);
-//void Update(int value);
-void drawStreetLight(GLenum srcLight);
-void drawSwings(void);
-void drawSwing(void);
-void drawFence(vec3 fromPoint, vec3 toPoint, float poleHeight);
-void drawFlagPole(void);
-void animateFlag(int value);
-void drawFountain(void);
-void drawDropletsOval(void);
-void animateDroplets(int value);
-float DrawChains(int length);
 float lerp(float a, float b, float t);
 float invLerp(float a, float b, float c);
-void drawSwingKid(int gender);
-void DrawHead(void);
-void DrawArm(void);
-void Drawlimb(float radius, float height);
-void DrawLeg(int gender, int isAnim);
-void drawCarousel(void);
-void DrawBody(float radius, float height, int gender);
-void DrawSquare(float xLen, float yLen, float zLen);
-void DrawCoOpSwing(void);
-void DrawCoOpSwingKid(int gender);
 void Paint(float r, float g, float b);
 void PaintSpec(float r, float g, float b);
 void GoldColor(void);
@@ -85,11 +88,8 @@ void PolishedSilverColor(void);
 void RubyColor(void);
 void EmeraldColor(void);
 void DrawCaruselKid(int gender);
-void animateCamera(int value);
-void animateSwingKids(int value);
-void animateWindSpinner(int value);
-void animateCoOpSwing(int value);
-void computeCameraVectors(void);
+float wrapAngle(float angle, float maxAngle);
+
 
 float time = 0;
 int isBanchExist = 0, dirSwingA = 1;
@@ -133,7 +133,6 @@ float droop = 0.0;
 int droop_index = 0;
 float droplets_offset = -90;
 
-
 // Sign, Flag, Bounce, WindSpinner, Carusel, ChainSwing, CoopSwing, SolarSys, Fountain
 const vec3 positions[9] = { {2.95, 3.25, 19.0},	{12.8, 4.0, 19.54},  {-8.4, 2.75, -3.95}, {6.31, 2.6, -0.10}, {15.34, 4.75, 12.9} , {-0.038, 2.75, -7.86} , {-6.1, 6.0, 10.0}, {13.68, 2.25, -5.65}, {-3.5, 3.25, -4.95} };
 const float angles_x[9] = { -15,		-16.5,	-22.5,	6,		-40.5,	-10.5,	-34.5,	-13.5,	-10.5 };
@@ -141,7 +140,6 @@ const float angles_y[9] = { 0,	348,	15,		270,	75,		0,		108,	34.5,	216 };
 vec3 initialCameraPos;
 int selected_model = 0;
 float camera_phaze = 0, initialAngleX, initialAngleY;
-
 
 int main(int argc, char** argv)
 {
@@ -175,8 +173,6 @@ int main(int argc, char** argv)
 	glutReshapeFunc(reshapeCB);
 	glutKeyboardFunc(keyboardCB);
 	glutSpecialFunc(keyboardSpecialCB);
-
-	// Start Position
 
 	texture_menu = glutCreateMenu(menuCB);
 	glutAddMenuEntry("Toggle ground texture", TEXTURE_GROUND);
@@ -217,9 +213,11 @@ int main(int argc, char** argv)
 
 	glutTimerFunc(0, animateFlag, 0);
 	glutTimerFunc(0, animateDroplets, 0);
+
 	glutTimerFunc(0, animateSwingKids, 0);
-	glutTimerFunc(0, animateWindSpinner, 0);
+	glutTimerFunc(0, animateWindSpinnerAndCarusel, 0);
 	glutTimerFunc(0, animateCoOpSwing, 0);
+
 	glutTimerFunc(ANIMATION_DELAY, animateBouncingBall, 0);
 	glutTimerFunc(ANIMATION_DELAY, animateSolarSystem, 0);
 
@@ -228,53 +226,148 @@ int main(int argc, char** argv)
 
 	//starting main loop
 	glutMainLoop();
-
 }
 
-void animateBouncingBall(int value)
+// Function to load bmp file
+// buffer for the image is allocated in this function, you should free this buffer
+GLubyte* readBMP(char* imagepath, int* width, int* height)
+{
+	unsigned char header[54]; // Each BMP file begins by a 54-bytes header
+	unsigned int dataPos;     // Position in the file where the actual data begins
+	unsigned int imageSize;   // = width*height*3
+	unsigned char* data;
+	unsigned char tmp;
+	int i;
+
+	// Open the file
+	FILE* file = fopen(imagepath, "rb");
+	if (!file) {
+		TerminationErrorFunc("Image could not be opened\n");
+	}
+
+	if (fread(header, 1, 54, file) != 54) { // If not 54 bytes read : problem
+		TerminationErrorFunc("Not a correct BMP file\n");
+	}
+
+	if (header[0] != 'B' || header[1] != 'M') {
+		TerminationErrorFunc("Not a correct BMP file\n");
+	}
+
+	// Read ints from the byte array
+	dataPos = *(int*)&(header[0x0A]);
+	imageSize = *(int*)&(header[0x22]);
+	*width = *(int*)&(header[0x12]);
+	*height = *(int*)&(header[0x16]);
+
+	// Some BMP files are misformatted, guess missing information
+	if (imageSize == 0)
+		imageSize = *width * *height * 3; // 3 : one byte for each Red, Green and Blue component
+	if (dataPos == 0)
+		dataPos = 54; // The BMP header is done that way
+
+	// Create a buffer
+	data = malloc(imageSize * sizeof(GLubyte));
+	if (data == NULL) {
+		TerminationErrorFunc("Failed to allocate memory\n");
+	}
+
+	// Read the actual data from the file into the buffer
+	fread(data, 1, imageSize, file);
+
+	//swap the r and b values to get RGB (bitmap is BGR)
+	for (i = 0; i < *width * *height; i++)
+	{
+		tmp = data[i * 3];
+		data[i * 3] = data[i * 3 + 2];
+		data[i * 3 + 2] = tmp;
+	}
+
+	//Everything is in memory now, the file can be closed
+	fclose(file);
+
+	return data;
+}
+
+GLuint load_texture(char* name)
+{
+	int width, height;
+	GLubyte* data = readBMP(name, &width, &height);
+	GLuint id;
+
+	glGenTextures(1, &id);
+	glBindTexture(GL_TEXTURE_2D, id);
+	glTexImage2D(GL_TEXTURE_2D, 0, 3, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	free(data);
+	return id;
+}
+
+vec3 vec3_add(vec3 a, vec3 b)
+{
+	vec3 res;
+	res.x = a.x + b.x;
+	res.y = a.y + b.y;
+	res.z = a.z + b.z;
+	return res;
+}
+
+vec3 vec3_scale(vec3 a, float s)
+{
+	vec3 res;
+	res.x = s * a.x;
+	res.y = s * a.y;
+	res.z = s * a.z;
+	return res;
+}
+
+vec3 vec3_neg(vec3 a)
+{
+	return vec3_scale(a, -1);
+}
+
+vec3 vec3_sub(vec3 a, vec3 b)
+{
+	return vec3_add(a, vec3_neg(b));
+}
+
+float vec3_dist(vec3 a, vec3 b)
+{
+	float dx = a.x - b.x;
+	float dy = a.y - b.y;
+	float dz = a.z - b.z;
+	return sqrt((double)dx * dx + (double)dy * dy + (double)dz * dz);
+}
+
+void animateWindSpinnerAndCarusel(int value)
 {
 	if (!animation)
 		return;
 
-	ballPosition += dxBall;
-
-	if (ballPosition >= 0.9) {
-		ballPosition = 0.9;
-		dxBall = -dxBall;
-	}
-	else if (ballPosition <= -0.9) {
-		ballPosition = -0.9;
-		dxBall = -dxBall;
-	}
+	rotationAngle += 2.0f; // Adjust rotation speed as needed
+	rotationAngle = wrapAngle(rotationAngle, 360.0);
 
 	glutPostRedisplay();
-	glutTimerFunc(ANIMATION_DELAY, animateBouncingBall, 0);
+	glutTimerFunc(SIXTY_FPS, animateWindSpinnerAndCarusel, 0); // ~60 FPS
 }
 
-void animateCamera(int value)
+void animateSwingKids(int value) 
 {
-	const float step = 0.02;
 	if (!animation)
 		return;
 
-	if (camera_phaze > 1 - step)
-		camera_phaze = 1;
+	float length = 0.8;
+	double omega = sqrt(9.81 / length);
 
-	cameraPos.x = lerp(initialCameraPos.x, positions[selected_model].x, camera_phaze);
-	cameraPos.y = lerp(initialCameraPos.y, positions[selected_model].y, camera_phaze);
-	cameraPos.z = lerp(initialCameraPos.z, positions[selected_model].z, camera_phaze);
+	time += SIXTY_FPS * 0.001f;
+	swingAng = SWING_MAX_ANG * cos(omega * time);
+	jointAngLeg = abs(90 * cos(omega * time));
 
-	angleX = lerp(initialAngleX, angles_x[selected_model], camera_phaze);
-	angleY = lerp(initialAngleY, angles_y[selected_model], camera_phaze);
-	computeCameraVectors();
 	glutPostRedisplay();
-
-	camera_phaze += step;
-	if (camera_phaze >= 1) {
-		camera_phaze = 0;
-		return;
-	}
-	glutTimerFunc(ANIMATION_DELAY, animateCamera, 0);
+	glutTimerFunc(SIXTY_FPS, animateSwingKids, 0); // ~60 FPS
 }
 
 void animateCoOpSwing(int value)
@@ -298,34 +391,40 @@ void animateCoOpSwing(int value)
 	}
 
 	glutPostRedisplay();
-	glutTimerFunc(16, animateCoOpSwing, 0); // ~60 FPS
+	glutTimerFunc(SIXTY_FPS, animateCoOpSwing, 0); // ~60 FPS
 }
 
-void animateDroplets(int value)
+void animateBouncingBall(int value)
 {
 	if (!animation)
 		return;
 
-	droplets_offset--;
-	if (droplets_offset <= -100) {
-		droplets_offset = -90;
+	ballPosition += dxBall;
+
+	if (ballPosition >= 0.9) {
+		ballPosition = 0.9;
+		dxBall = -dxBall;
 	}
-	glutTimerFunc(16, animateDroplets, 0);
+	else if (ballPosition <= -0.9) {
+		ballPosition = -0.9;
+		dxBall = -dxBall;
+	}
+
 	glutPostRedisplay();
+	glutTimerFunc(ANIMATION_DELAY, animateBouncingBall, 0);
 }
 
-void animateFlag(int value)
+void animateSolarSystem(int value)
 {
 	if (!animation)
 		return;
 
-	float droop_values[16] = { 0.005, 0.01, 0.02, 0.03, 0.05, 0.07, 0.09, 0.11, 0.12,
-							0.11, 0.09, 0.07, 0.05, 0.03, 0.02, 0.01 }; // 16
-	droop = droop_values[droop_index];
-	droop_index++;
-	droop_index = droop_index == 16 ? 0 : droop_index;
-	glutTimerFunc(64, animateFlag, 0);
+	sunSelf = wrapAngle(sunSelf + CELESTIAL_SELF_SPIN, 360);
+	earthSelf = wrapAngle(earthSelf + CELESTIAL_SELF_SPIN, 360);
+	earthAngle = wrapAngle(earthAngle + CELESTIAL_SPIN, 360);
+	moonAngle = wrapAngle(moonAngle + CELESTIAL_SPIN, 360);
 	glutPostRedisplay();
+	glutTimerFunc(ANIMATION_DELAY, animateSolarSystem, 0);
 }
 
 void animateTimeChange(int value)
@@ -404,98 +503,31 @@ void animateTimeChange(int value)
 	glutTimerFunc(ANIMATION_DELAY, animateTimeChange, value);
 }
 
-void animateWindSpinner(int value)
+void animateFlag(int value)
 {
 	if (!animation)
 		return;
 
-	rotationAngle += 2.0f; // Adjust rotation speed as needed
-	rotationAngle = wrapAngle(rotationAngle, 360.0);
-
+	float droop_values[16] = { 0.005, 0.01, 0.02, 0.03, 0.05, 0.07, 0.09, 0.11, 0.12,
+							0.11, 0.09, 0.07, 0.05, 0.03, 0.02, 0.01 }; // 16
+	droop = droop_values[droop_index];
+	droop_index++;
+	droop_index = droop_index == 16 ? 0 : droop_index;
+	glutTimerFunc(64, animateFlag, 0);
 	glutPostRedisplay();
-	glutTimerFunc(SIXTY_FPS, animateWindSpinner, 0); // ~60 FPS
 }
 
-void animateSolarSystem(int value)
+void animateDroplets(int value)
 {
 	if (!animation)
 		return;
 
-	sunSelf = wrapAngle(sunSelf + CELESTIAL_SELF_SPIN, 360);
-	earthSelf = wrapAngle(earthSelf + CELESTIAL_SELF_SPIN, 360);
-	earthAngle = wrapAngle(earthAngle + CELESTIAL_SPIN, 360);
-	moonAngle = wrapAngle(moonAngle + CELESTIAL_SPIN, 360);
+	droplets_offset--;
+	if (droplets_offset <= -100) {
+		droplets_offset = -90;
+	}
+	glutTimerFunc(16, animateDroplets, 0);
 	glutPostRedisplay();
-	glutTimerFunc(ANIMATION_DELAY, animateSolarSystem, 0);
-}
-
-void animateSwingKids(int value)
-{
-	if (!animation)
-		return;
-	float length = 0.8;
-	double omega = sqrt(9.81 / length);
-
-	jointAngLeg = abs(90 * cos(omega * time));
-	time += 16 * 0.001f;
-	swingAng = SWING_MAX_ANG * cos(omega * time);
-
-	glutPostRedisplay();
-	glutTimerFunc(SIXTY_FPS, animateSwingKids, 0); // ~60 FPS
-}
-
-GLuint load_texture(char* name)
-{
-	int width, height;
-	GLubyte* data = readBMP(name, &width, &height);
-	GLuint id;
-
-	glGenTextures(1, &id);
-	glBindTexture(GL_TEXTURE_2D, id);
-	glTexImage2D(GL_TEXTURE_2D, 0, 3, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	free(data);
-	return id;
-}
-
-vec3 vec3_add(vec3 a, vec3 b)
-{
-	vec3 res;
-	res.x = a.x + b.x;
-	res.y = a.y + b.y;
-	res.z = a.z + b.z;
-	return res;
-}
-
-vec3 vec3_scale(vec3 a, float s)
-{
-	vec3 res;
-	res.x = s * a.x;
-	res.y = s * a.y;
-	res.z = s * a.z;
-	return res;
-}
-
-vec3 vec3_neg(vec3 a)
-{
-	return vec3_scale(a, -1);
-}
-
-vec3 vec3_sub(vec3 a, vec3 b)
-{
-	return vec3_add(a, vec3_neg(b));
-}
-
-float vec3_dist(vec3 a, vec3 b)
-{
-	float dx = a.x - b.x;
-	float dy = a.y - b.y;
-	float dz = a.z - b.z;
-	return sqrt((double)dx * dx + (double)dy * dy + (double)dz * dz);
 }
 
 void resumeModulate(void)
@@ -727,28 +759,28 @@ void drawingCB(void)
 	glLightfv(LIGHT_SUN, GL_DIFFUSE, sunLightColor);
 	glPopMatrix();
 
-	drawFence(fenceA1, fenceA2, 2);
-	drawFence(fenceB1, fenceB2, 2);
-	drawFence(fenceC1, fenceC2, 2);
-	drawFence(fenceD1, fenceD2, 2);
-	drawFence(fenceE1, fenceE2, 2);
+	DrawFence(fenceA1, fenceA2, 2);
+	DrawFence(fenceB1, fenceB2, 2);
+	DrawFence(fenceC1, fenceC2, 2);
+	DrawFence(fenceD1, fenceD2, 2);
+	DrawFence(fenceE1, fenceE2, 2);
 
 	// Draw Israel Flag
 	glPushMatrix();
 	glTranslatef(boundery, 0, boundery);
-	drawFlagPole();
+	DrawFlagPole();
 	glPopMatrix();
 
 	// Draw Israel Flag
 	glPushMatrix();
 	glTranslatef(-boundery, 0, boundery);
-	drawFlagPole();
+	DrawFlagPole();
 	glPopMatrix();
 
 	// Draw Sign
 	glPushMatrix();
 	glTranslatef(3, 0, boundery);
-	drawSign();
+	DrawSign();
 	glPopMatrix();
 
 	// Draw WindSpinner
@@ -756,20 +788,20 @@ void drawingCB(void)
 	glTranslatef(boundery - 1, 3, 0);
 	glRotatef(180, 0.0, 1.0, 0.0);
 	glScalef(2.0, 2.0, 2.0);
-	drawWindSpinner();
+	DrawWindSpinner();
 	glPopMatrix();
 
 	// Draw Fountain
 	glPushMatrix();
-	drawFountain();
+	DrawFountain();
 	glPopMatrix();
 
 	// Draw Swings
 	glPushMatrix();
 	glTranslatef(0.0, 1.0, -boundery + 3.0);
-	drawSwings();
+	DrawSwings();
 	glTranslatef(0.0, -1.0, -1.5);
-	drawStreetLight(LIGHT_STREETLAMP3);
+	DrawStreetLight(LIGHT_STREETLAMP3);
 	glPopMatrix();
 
 	// Draw Bouncing Ball
@@ -789,10 +821,10 @@ void drawingCB(void)
 	// Draw Carousel
 	glPushMatrix();
 	glTranslatef(boundery - 4, 0.0, boundery - 4);
-	drawCarousel();
+	DrawCarousel();
 	glTranslatef(2, 0, 2.8);
 	glRotatef(200, 0.0, 1.0, 0.0);
-	drawStreetLight(LIGHT_STREETLAMP1);
+	DrawStreetLight(LIGHT_STREETLAMP1);
 	glPopMatrix();
 
 	// Draw Co-Op Swing 
@@ -802,7 +834,7 @@ void drawingCB(void)
 	DrawCoOpSwing();
 	glRotatef(180, 0, 1, 0);
 	glTranslatef(0.0, -1, -2.0);
-	drawStreetLight(LIGHT_STREETLAMP2);
+	DrawStreetLight(LIGHT_STREETLAMP2);
 	glPopMatrix();
 
 	drawGround();
@@ -813,7 +845,7 @@ void drawingCB(void)
 	if (er) printf("error: %d\n", er);
 }
 
-void drawCarousel(void)
+void DrawCarousel(void)
 {
 	int i;
 
@@ -873,11 +905,11 @@ void drawCarousel(void)
 	glPopMatrix();
 
 
-	//drawSwingKid(1);
+	//DrawSwingKid(1);
 	glPopMatrix();
 }
 
-void drawFountain(void)
+void DrawFountain(void)
 {
 	int i;
 	GLUquadric* sphere = gluNewQuadric();
@@ -915,7 +947,7 @@ void drawFountain(void)
 		glRotatef(36 * i, 0, 1, 0);
 		glTranslatef(1, 0, 0);
 		glScalef(0.5, 1, 1);
-		drawDropletsOval();
+		DrawDropletsOval();
 
 		glPopMatrix();
 	}
@@ -936,7 +968,7 @@ void drawFountain(void)
 	glPopMatrix();
 }
 
-void drawDropletsOval(void)
+void DrawDropletsOval(void)
 {
 	float raius = 1;
 	float scale = 0.3;
@@ -970,7 +1002,7 @@ void drawDropletsOval(void)
 	glPopMatrix();
 }
 
-void drawFence(vec3 fromPoint, vec3 toPoint, float poleHeight)
+void DrawFence(vec3 fromPoint, vec3 toPoint, float poleHeight)
 {
 	float poleDistance = 0.4f;
 	float poleRadius = 0.1f;
@@ -1001,7 +1033,7 @@ void drawFence(vec3 fromPoint, vec3 toPoint, float poleHeight)
 	glPopMatrix();
 }
 
-void drawFlagPole(void)
+void DrawFlagPole(void)
 {
 	float poleRadius = 0.1f;
 	float poleHeight = 4.5;
@@ -1037,7 +1069,7 @@ void drawFlagPole(void)
 	/* 1 out */ glPopMatrix();
 }
 
-void drawSign(void)
+void DrawSign(void)
 {
 	float sign_width = 2;
 	float sign_height = 2;
@@ -1196,14 +1228,6 @@ void drawSign(void)
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	/* 3 out */ glPopMatrix();
-}
-
-vec3 getPos() {
-	GLfloat pos[16];
-	glGetFloatv(GL_MODELVIEW_MATRIX, pos);
-	vec3 res = { pos[12], pos[13] ,pos[14] };
-
-	return res;
 }
 
 void VerticalCylinder(float radius, float height)
@@ -1474,7 +1498,7 @@ void keyboardCB(unsigned char key, int x, int y)
 		animation = !animation;
 		if (animation) {
 			glutTimerFunc(0, animateSwingKids, 0);
-			glutTimerFunc(0, animateWindSpinner, 0);
+			glutTimerFunc(0, animateWindSpinnerAndCarusel, 0);
 			glutTimerFunc(0, animateCoOpSwing, 0);
 			glutTimerFunc(0, animateFlag, 0);
 			glutTimerFunc(0, animateDroplets, 0);
@@ -1508,6 +1532,32 @@ void keyboardSpecialCB(int key, int x, int y)
 	glutPostRedisplay();
 }
 
+void animateCamera(int value)
+{
+	const float step = 0.02;
+	if (!animation)
+		return;
+
+	if (camera_phaze > 1 - step)
+		camera_phaze = 1;
+
+	cameraPos.x = lerp(initialCameraPos.x, positions[selected_model].x, camera_phaze);
+	cameraPos.y = lerp(initialCameraPos.y, positions[selected_model].y, camera_phaze);
+	cameraPos.z = lerp(initialCameraPos.z, positions[selected_model].z, camera_phaze);
+
+	angleX = lerp(initialAngleX, angles_x[selected_model], camera_phaze);
+	angleY = lerp(initialAngleY, angles_y[selected_model], camera_phaze);
+	computeCameraVectors();
+	glutPostRedisplay();
+
+	camera_phaze += step;
+	if (camera_phaze >= 1) {
+		camera_phaze = 0;
+		return;
+	}
+	glutTimerFunc(ANIMATION_DELAY, animateCamera, 0);
+}
+
 float lerp(float a, float b, float t)
 {
 	return a * (1 - t) + b * t;
@@ -1516,66 +1566,6 @@ float lerp(float a, float b, float t)
 float invLerp(float a, float b, float c)
 {
 	return (c - a) / (b - a);
-}
-
-// Function to load bmp file
-// buffer for the image is allocated in this function, you should free this buffer
-GLubyte* readBMP(char* imagepath, int* width, int* height)
-{
-	unsigned char header[54]; // Each BMP file begins by a 54-bytes header
-	unsigned int dataPos;     // Position in the file where the actual data begins
-	unsigned int imageSize;   // = width*height*3
-	unsigned char* data;
-	unsigned char tmp;
-	int i;
-
-	// Open the file
-	FILE* file = fopen(imagepath, "rb");
-	if (!file) {
-		TerminationErrorFunc("Image could not be opened\n");
-	}
-
-	if (fread(header, 1, 54, file) != 54) { // If not 54 bytes read : problem
-		TerminationErrorFunc("Not a correct BMP file\n");
-	}
-
-	if (header[0] != 'B' || header[1] != 'M') {
-		TerminationErrorFunc("Not a correct BMP file\n");
-	}
-
-	// Read ints from the byte array
-	dataPos = *(int*)&(header[0x0A]);
-	imageSize = *(int*)&(header[0x22]);
-	*width = *(int*)&(header[0x12]);
-	*height = *(int*)&(header[0x16]);
-
-	// Some BMP files are misformatted, guess missing information
-	if (imageSize == 0)
-		imageSize = *width * *height * 3; // 3 : one byte for each Red, Green and Blue component
-	if (dataPos == 0)
-		dataPos = 54; // The BMP header is done that way
-
-	// Create a buffer
-	data = malloc(imageSize * sizeof(GLubyte));
-	if (data == NULL) {
-		TerminationErrorFunc("Failed to allocate memory\n");
-	}
-
-	// Read the actual data from the file into the buffer
-	fread(data, 1, imageSize, file);
-
-	//swap the r and b values to get RGB (bitmap is BGR)
-	for (i = 0; i < *width * *height; i++)
-	{
-		tmp = data[i * 3];
-		data[i * 3] = data[i * 3 + 2];
-		data[i * 3 + 2] = tmp;
-	}
-
-	//Everything is in memory now, the file can be closed
-	fclose(file);
-
-	return data;
 }
 
 void TerminationErrorFunc(char* ErrorString)
@@ -1587,7 +1577,7 @@ void TerminationErrorFunc(char* ErrorString)
 	exit(0);
 }
 
-void drawWindSpinner(void)
+void DrawWindSpinner(void)
 {
 	float CylinderHeight = 3.0f;
 	float CylinderRadius = 0.1f;
@@ -1623,7 +1613,7 @@ void drawWindSpinner(void)
 	glPopMatrix();
 }
 
-void drawStreetLight(GLenum srcLight)
+void DrawStreetLight(GLenum srcLight)
 {
 	GLUquadric* quadric;
 	quadric = gluNewQuadric();
@@ -1685,7 +1675,7 @@ void drawStreetLight(GLenum srcLight)
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void drawSwings(void)
+void DrawSwings(void)
 {
 	GLUquadric* quadric;
 	glPushMatrix();
@@ -1731,20 +1721,20 @@ void drawSwings(void)
 	glPushMatrix();
 	glTranslated(-1.5, 0, 0);
 	glRotatef(swingAng, 1, 0, 0);
-	drawSwing();
+	DrawSwing();
 	glTranslatef(0.5, -1.85, 0);
 	glScalef(0.9, 0.9, 0.9);
-	drawSwingKid(0); // Draw girl on swing
+	DrawSwingKid(0); // Draw girl on swing
 	glPopMatrix();
 
 	// Draw Swing Right
 	glPushMatrix();
 	glTranslated(0.5, 0, 0);
 	glRotatef(-swingAng, 1, 0, 0);
-	drawSwing();
+	DrawSwing();
 	glTranslatef(0.5, -1.85, 0);
 	glScalef(0.9, 0.9, 0.9);
-	drawSwingKid(1); // Draw boy on swing
+	DrawSwingKid(1); // Draw boy on swing
 	glPopMatrix();
 
 	glPopMatrix();
@@ -1752,7 +1742,7 @@ void drawSwings(void)
 	glPopMatrix();
 }
 
-void drawBlade(void)
+void DrawBlade(void)
 {
 	glPushMatrix();
 	glTranslated(0, 0, -1);
@@ -1769,7 +1759,7 @@ void DrawSpinner(void)
 	// Draw the wind spinner blades
 	for (i = 0; i < 6; ++i) {
 		glRotatef(60.0, 1.0, 0.0, 0.0);
-		drawBlade();
+		DrawBlade();
 	}
 
 	glPopMatrix();
@@ -1801,7 +1791,7 @@ float DrawChains(int length)
 	return y;
 }
 
-void drawSwing(void)
+void DrawSwing(void)
 {
 	float y;
 
@@ -1967,9 +1957,6 @@ void DrawArm(void)
 	glPopMatrix();
 }
 
-
-
-
 void DrawSquare(float xLen, float yLen, float zLen)
 {
 	glPushMatrix();
@@ -2111,7 +2098,7 @@ void DrawCoOpSwing(void)
 
 }
 
-void drawSwingKid(int gender)
+void DrawSwingKid(int gender)
 {
 	vec3 legPos = { 0.14, -0.1, 0.0 };
 	vec3 armPos = { 0.23, 0.5, 0.0 };
