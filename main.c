@@ -90,7 +90,6 @@ void EmeraldColor(void);
 void DrawCaruselKid(int gender);
 float wrapAngle(float angle, float maxAngle);
 
-
 float time = 0;
 int isBanchExist = 0, dirSwingA = 1;
 float swingAng = SWING_MAX_ANG;
@@ -227,7 +226,6 @@ int main(int argc, char** argv)
 	//starting main loop
 	glutMainLoop();
 }
-
 // Function to load bmp file
 // buffer for the image is allocated in this function, you should free this buffer
 GLubyte* readBMP(char* imagepath, int* width, int* height)
@@ -577,37 +575,28 @@ void drawBouncingBall(void)
 	GLUquadric* sphere = gluNewQuadric();
 	gluQuadricTexture(sphere, GL_TRUE);
 
-	texture&& ball ? PaintSpec(1, 1, 1) : PaintSpec(0, 0, 0);
 	glBindTexture(GL_TEXTURE_2D, wall);
-	glBegin(GL_QUADS);
-	//glNormal3f(ballPosition + 1, -1, -1);
-	glNormal3f(1, 0, 0);
-	glTexCoord2f(0, 1);
-	glVertex3f(-1, 1, 1);
-	//glNormal3f(ballPosition + 1, 1, -1);
-	glTexCoord2f(0, 0);
-	glVertex3f(-1, -1, 1);
-	//glNormal3f(ballPosition + 1, 1, 1);
-	glTexCoord2f(1, 0);
-	glVertex3f(-1, -1, -1);
-	//glNormal3f(ballPosition + 1, -1, 1);
-	glTexCoord2f(1, 1);
-	glVertex3f(-1, 1, -1);
-	//glNormal3f(ballPosition - 1, -1, -1);
-	glNormal3f(-1, 0, 0);
-	glTexCoord2f(1, 1);
-	glVertex3f(1, 1, 1);
-	//glNormal3f(ballPosition - 1, 1, -1);
-	glTexCoord2f(1, 0);
-	glVertex3f(1, -1, 1);
-	//glNormal3f(ballPosition - 1, 1, 1);
-	glTexCoord2f(0, 0);
-	glVertex3f(1, -1, -1);
-	//glNormal3f(ballPosition - 1, -1, 1);
-	glTexCoord2f(0, 1);
-	glVertex3f(1, 1, -1);
-	glEnd();
+	glTexGenf(GL_S, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
+	glTexGenf(GL_T, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
+	glEnable(GL_TEXTURE_GEN_S);
+	glEnable(GL_TEXTURE_GEN_T);
 
+	texture && ball ? PaintSpec(1, 1, 1) : PaintSpec(0, 0, 0);
+	//glBindTexture(GL_TEXTURE_2D, wall);
+
+	glPushMatrix();
+	glTranslatef(-1.1, -1, -1);
+	DrawSquare(0.1, 2.0, 1.5);
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslatef(1.0, -1, -1);
+	DrawSquare(0.1, 2.0, 1.5);
+	glPopMatrix();
+
+	glDisable(GL_TEXTURE_GEN_S);
+	glDisable(GL_TEXTURE_GEN_T);
+	
 	if (ballPosition < -0.6)
 		scale = invLerp(-1, -0.6, ballPosition);
 	else if (ballPosition > 0.6)
@@ -1957,68 +1946,6 @@ void DrawArm(void)
 	glPopMatrix();
 }
 
-void DrawSquare(float xLen, float yLen, float zLen)
-{
-	glPushMatrix();
-
-	// Back
-	glBegin(GL_POLYGON);
-	glNormal3f(0, 0, -1);
-	glVertex3f(0, 0, 0);
-	glVertex3f(xLen, 0, 0);
-	glVertex3f(xLen, yLen, 0);
-	glVertex3f(0, yLen, 0);
-	glEnd();
-
-	// Front
-	glBegin(GL_POLYGON);
-	glNormal3f(0, 0, 1);
-	glVertex3f(0.0, 0.0, zLen);
-	glVertex3f(xLen, 0.0, zLen);
-	glVertex3f(xLen, yLen, zLen);
-	glVertex3f(0.0, yLen, zLen);
-	glEnd();
-
-	// Right
-	glBegin(GL_POLYGON);
-	glNormal3f(1, 0, 0);
-	glVertex3f(xLen, 0.0, 0.0);
-	glVertex3f(xLen, yLen, 0.0);
-	glVertex3f(xLen, yLen, zLen);
-	glVertex3f(xLen, 0.0, zLen);
-	glEnd();
-
-	// Left
-	glBegin(GL_POLYGON);
-	glNormal3f(-1, 0, 0);
-	glVertex3f(0.0, 0.0, 0.0);
-	glVertex3f(0.0, 0.0, zLen);
-	glVertex3f(0.0, yLen, zLen);
-	glVertex3f(0.0, yLen, 0.0);
-	glEnd();
-
-	// Top
-	glBegin(GL_POLYGON);
-	glNormal3f(0, 1, 0);
-	glVertex3f(0.0, yLen, 0.0);
-	glVertex3f(0.0, yLen, zLen);
-	glVertex3f(xLen, yLen, zLen);
-	glVertex3f(xLen, yLen, 0.0);
-	glEnd();
-
-	// Down
-	glBegin(GL_POLYGON);
-	glNormal3f(0, -1, 0);
-	glVertex3f(0.0, 0.0, 0.0);
-	glVertex3f(0.0, 0.0, zLen);
-	glVertex3f(xLen, 0.0, zLen);
-	glVertex3f(xLen, 0.0, 0.0);
-	glEnd();
-
-	glPopMatrix();
-
-}
-
 void DrawCoOpSwing(void)
 {
 	GLUquadric* quadric;
@@ -2207,6 +2134,68 @@ void DrawCaruselKid(int gender) {
 	DrawArm();
 	glPopMatrix();
 	glPopMatrix();
+}
+
+void DrawSquare(float xLen, float yLen, float zLen)
+{
+	glPushMatrix();
+
+	// Back
+	glBegin(GL_POLYGON);
+	glNormal3f(0, 0, -1);
+	glVertex3f(0, 0, 0);
+	glVertex3f(xLen, 0, 0);
+	glVertex3f(xLen, yLen, 0);
+	glVertex3f(0, yLen, 0);
+	glEnd();
+
+	// Front
+	glBegin(GL_POLYGON);
+	glNormal3f(0, 0, 1);
+	glVertex3f(0.0, 0.0, zLen);
+	glVertex3f(xLen, 0.0, zLen);
+	glVertex3f(xLen, yLen, zLen);
+	glVertex3f(0.0, yLen, zLen);
+	glEnd();
+
+	// Right
+	glBegin(GL_POLYGON);
+	glNormal3f(1, 0, 0);
+	glVertex3f(xLen, 0.0, 0.0);
+	glVertex3f(xLen, yLen, 0.0);
+	glVertex3f(xLen, yLen, zLen);
+	glVertex3f(xLen, 0.0, zLen);
+	glEnd();
+
+	// Left
+	glBegin(GL_POLYGON);
+	glNormal3f(-1, 0, 0);
+	glVertex3f(0.0, 0.0, 0.0);
+	glVertex3f(0.0, 0.0, zLen);
+	glVertex3f(0.0, yLen, zLen);
+	glVertex3f(0.0, yLen, 0.0);
+	glEnd();
+
+	// Top
+	glBegin(GL_POLYGON);
+	glNormal3f(0, 1, 0);
+	glVertex3f(0.0, yLen, 0.0);
+	glVertex3f(0.0, yLen, zLen);
+	glVertex3f(xLen, yLen, zLen);
+	glVertex3f(xLen, yLen, 0.0);
+	glEnd();
+
+	// Down
+	glBegin(GL_POLYGON);
+	glNormal3f(0, -1, 0);
+	glVertex3f(0.0, 0.0, 0.0);
+	glVertex3f(0.0, 0.0, zLen);
+	glVertex3f(xLen, 0.0, zLen);
+	glVertex3f(xLen, 0.0, 0.0);
+	glEnd();
+
+	glPopMatrix();
+
 }
 
 void GoldColor(void) {
