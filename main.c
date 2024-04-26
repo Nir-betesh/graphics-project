@@ -318,10 +318,96 @@ void drawGround(void)
 	glDisable(GL_TEXTURE_2D);
 }
 
+void drawWall(float xLen, float yLen, float zLen)
+{
+	GLfloat emissionOn[] = { 1, 1, 1, 1 };
+	GLfloat emissionOff[] = { 0, 0, 0, 1 };
+
+	// Back
+	glBegin(GL_POLYGON);
+	glNormal3f(0, 0, -1);
+	glTexCoord2f(0.25, 0);
+	glVertex3f(0, 0, 0);
+	glTexCoord2f(0.75, 0);
+	glVertex3f(xLen, 0, 0);
+	glTexCoord2f(0.75, 1);
+	glVertex3f(xLen, yLen, 0);
+	glTexCoord2f(0.25, 1);
+	glVertex3f(0, yLen, 0);
+	glEnd();
+
+	// Front
+	glBegin(GL_POLYGON);
+	glNormal3f(0, 0, 1);
+	glTexCoord2f(0.25, 0);
+	glVertex3f(0.0, 0.0, zLen);
+	glTexCoord2f(0.75, 0);
+	glVertex3f(xLen, 0.0, zLen);
+	glTexCoord2f(0.75, 1);
+	glVertex3f(xLen, yLen, zLen);
+	glTexCoord2f(0.25, 1);
+	glVertex3f(0.0, yLen, zLen);
+	glEnd();
+
+	// Right
+	glMaterialfv(GL_FRONT, GL_EMISSION, emissionOn);
+	glBegin(GL_POLYGON);
+	glNormal3f(1, 0, 0);
+	glTexCoord2f(1, 0);
+	glVertex3f(xLen, 0.0, 0.0);
+	glTexCoord2f(1, 1);
+	glVertex3f(xLen, yLen, 0.0);
+	glTexCoord2f(0, 1);
+	glVertex3f(xLen, yLen, zLen);
+	glTexCoord2f(0, 0);
+	glVertex3f(xLen, 0.0, zLen);
+	glEnd();
+	glMaterialfv(GL_FRONT, GL_EMISSION, emissionOff);
+
+	// Left
+	glBegin(GL_POLYGON);
+	glNormal3f(-1, 0, 0);
+	glTexCoord2f(0, 0);
+	glVertex3f(0.0, 0.0, 0.0);
+	glTexCoord2f(1, 0);
+	glVertex3f(0.0, 0.0, zLen);
+	glTexCoord2f(1, 1);
+	glVertex3f(0.0, yLen, zLen);
+	glTexCoord2f(0, 1);
+	glVertex3f(0.0, yLen, 0.0);
+	glEnd();
+
+	// Top
+	glBegin(GL_POLYGON);
+	glNormal3f(0, 1, 0);
+	glTexCoord2f(0.25, 1);
+	glVertex3f(0.0, yLen, 0.0);
+	glTexCoord2f(0.25, 0);
+	glVertex3f(0.0, yLen, zLen);
+	glTexCoord2f(0.75, 0);
+	glVertex3f(xLen, yLen, zLen);
+	glTexCoord2f(0.75, 1);
+	glVertex3f(xLen, yLen, 0.0);
+	glEnd();
+
+	// Down
+	glBegin(GL_POLYGON);
+	glNormal3f(0, -1, 0);
+	glTexCoord2f(0.25, 0);
+	glVertex3f(0.0, 0.0, 0.0);
+	glTexCoord2f(0.25, 1);
+	glVertex3f(0.0, 0.0, zLen);
+	glTexCoord2f(0.75, 1);
+	glVertex3f(xLen, 0.0, zLen);
+	glTexCoord2f(0.75, 0);
+	glVertex3f(xLen, 0.0, 0.0);
+	glEnd();
+}
+
 void drawBouncingBall(void)
 {
 	GLfloat ballLight[] = { ballPosition, 0, 0, 1 };
-	GLfloat ballColor[] = { 2, 0.7, 0.7, 1 };
+	GLfloat ballColor[] = { 1, 0.7, 0.7, 1 };
 	GLfloat ballAmbient[] = { 0.4, 0.4, 0.4, 1 };
 	GLfloat ballEmissionOn[] = { 1, 1, 1, 1 };
 	GLfloat ballEmissionOff[] = { 0, 0, 0, 1 };
@@ -356,7 +442,7 @@ void drawBouncingBall(void)
 	glLightfv(LIGHT_BALL, GL_POSITION, ballLight);
 	glLightfv(LIGHT_BALL, GL_DIFFUSE, ballColor);
 	glLightfv(LIGHT_BALL, GL_AMBIENT, ballAmbient);
-	glLightf(LIGHT_BALL, GL_QUADRATIC_ATTENUATION, 0.04);
+	glLightf(LIGHT_BALL, GL_QUADRATIC_ATTENUATION, 0.02);
 	PaintSpec(1, 0, 0);
 	// Draw the ball
 	gluSphere(sphere, 0.4, 30, 30);
@@ -366,31 +452,15 @@ void drawBouncingBall(void)
 
 	(texture && ballTexEnable) ? PaintSpec(1, 1, 1) : PaintSpec(0, 0, 0);
 	glBindTexture(GL_TEXTURE_2D, wall);
-	glMaterialfv(GL_FRONT, GL_EMISSION, ballColor);
-	glBegin(GL_QUADS);
-	// Left wall
-	glNormal3f(1, 0, 0);
-	glTexCoord2f(0, 1);
-	glVertex3f(-1, 1, 1);
-	glTexCoord2f(0, 0);
-	glVertex3f(-1, -1, 1);
-	glTexCoord2f(1, 0);
-	glVertex3f(-1, -1, -1);
-	glTexCoord2f(1, 1);
-	glVertex3f(-1, 1, -1);
-
-	// Right wall
-	glNormal3f(-1, 0, 0);
-	glTexCoord2f(1, 1);
-	glVertex3f(1, 1, 1);
-	glTexCoord2f(1, 0);
-	glVertex3f(1, -1, 1);
-	glTexCoord2f(0, 0);
-	glVertex3f(1, -1, -1);
-	glTexCoord2f(0, 1);
-	glVertex3f(1, 1, -1);
-	glEnd();
-	glMaterialfv(GL_FRONT, GL_EMISSION, ballEmissionOff);
+	glPushMatrix();
+	glTranslatef(-1.5, -1, -1);
+	drawWall(0.5, 2, 2);
+	glPopMatrix();
+	glPushMatrix();
+	glTranslatef(1.5, -1, 1);
+	glRotatef(180, 0, 1, 0);
+	drawWall(0.5, 2, 2);
+	glPopMatrix();
 
 	glDisable(GL_TEXTURE_2D);
 }
@@ -565,7 +635,7 @@ void drawingCB(void)
 
 	// Draw Bouncing Ball
 	glPushMatrix();
-	glTranslatef(-boundery + 3, 2, -boundery + 3);
+	glTranslatef(-boundery + 5, 2, -boundery + 5);
 	glRotatef(45, 0, 1, 0);
 	glScalef(2.0, 2.0, 2.0);	
 	drawBouncingBall();
