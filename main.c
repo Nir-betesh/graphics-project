@@ -6,6 +6,7 @@
 // Constant definitions
 #define PI 3.14159265359f
 #define ANIMATION_DELAY 40
+#define SIXTY_FPS 16
 #define CAMERA_ROTATION_SPEED 1.8f
 #define CAMERA_SPEED 0.30f
 #define BALL_SPEED 0.07f
@@ -55,16 +56,15 @@ void DrawSign(void);
 void DrawWindSpinner(void);
 void DrawSpinner(void);
 void DrawBlade(void);
-void Update(int value);
 void DrawStreetLight(GLenum srcLight);
 void DrawSwings(void);
 void DrawSwing(void);
 void DrawFence(vec3 fromPoint, vec3 toPoint, float poleHeight);
 void DrawFlagPole(void);
-void UpdateFlag(int value);
+void animateFlag(int value);
 void DrawFountain(void);
 void DrawDropletsOval(void);
-void UpdateDroplets(int value);
+void animateDroplets(int value);
 float DrawChains(int length);
 float lerp(float a, float b, float t);
 float invLerp(float a, float b, float c);
@@ -86,6 +86,9 @@ void RubyColor(void);
 void EmeraldColor(void);
 void DrawCaruselKid(int gender);
 void animateCamera(int value);
+void animateCoOpSwing(int value);
+void animateWindSpinnerAndCarusel(int value);
+void animateSwingKids(int value);
 
 // Globals
 float time = 0;
@@ -209,11 +212,14 @@ int main(int argc, char **argv)
 	metal = load_texture("metal.bmp");
 	face = load_texture("face.bmp");
 
-	glutTimerFunc(ANIMATION_DELAY, Update, 0);
-	glutTimerFunc(ANIMATION_DELAY, UpdateFlag, 0);
-	glutTimerFunc(ANIMATION_DELAY, UpdateDroplets, 0);
-	glutTimerFunc(ANIMATION_DELAY, animateBouncingBall, 0);
-	glutTimerFunc(ANIMATION_DELAY, animateSolarSystem, 0);
+	glutTimerFunc(0, animateSwingKids, 0);
+	glutTimerFunc(0, animateWindSpinnerAndCarusel, 0);
+	glutTimerFunc(0, animateCoOpSwing, 0);
+
+	glutTimerFunc(0, animateFlag, 0);
+	glutTimerFunc(0, animateDroplets, 0);
+	glutTimerFunc(0, animateBouncingBall, 0);
+	glutTimerFunc(0, animateSolarSystem, 0);
 
 	// Make sure texturing interacts with lighting
 	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
@@ -1291,11 +1297,14 @@ void keyboardCB(unsigned char key, int x, int y)
 	case 'n':
 		animation = !animation;
 		if (animation) {
-			glutTimerFunc(0, Update, 0);
-			glutTimerFunc(0, UpdateFlag, 0);
-			glutTimerFunc(0, UpdateDroplets, 0);
-			glutTimerFunc(ANIMATION_DELAY, animateBouncingBall, 0);
-			glutTimerFunc(ANIMATION_DELAY, animateSolarSystem, 0);
+
+			glutTimerFunc(0, animateSwingKids, 0);
+			glutTimerFunc(0, animateWindSpinnerAndCarusel, 0);
+			glutTimerFunc(0, animateCoOpSwing, 0);
+			glutTimerFunc(0, animateFlag, 0);
+			glutTimerFunc(0, animateDroplets, 0);
+			glutTimerFunc(0, animateBouncingBall, 0);
+			glutTimerFunc(0, animateSolarSystem, 0);
 		}
 		break;
 	}
@@ -1461,7 +1470,7 @@ void animateTimeChange(int value)
 	glutTimerFunc(ANIMATION_DELAY, animateTimeChange, value);
 }
 
-void UpdateFlag(int value)
+void animateFlag(int value)
 {
 	if (!animation)
 		return;
@@ -1471,11 +1480,11 @@ void UpdateFlag(int value)
 	droop = droop_values[droop_index];
 	droop_index++;
 	droop_index = droop_index == 16 ? 0 : droop_index;
-	glutTimerFunc(ANIMATION_DELAY, UpdateFlag, 0);
+	glutTimerFunc(ANIMATION_DELAY, animateFlag, 0);
 	glutPostRedisplay();
 }
 
-void UpdateDroplets(int value)
+void animateDroplets(int value)
 {
 	if (!animation)
 		return;
@@ -1484,7 +1493,7 @@ void UpdateDroplets(int value)
 	if (droplets_offset <= -100) {
 		droplets_offset = -90;
 	}
-	glutTimerFunc(ANIMATION_DELAY, UpdateDroplets, 0);
+	glutTimerFunc(ANIMATION_DELAY, animateDroplets, 0);
 	glutPostRedisplay();
 }
 
@@ -1978,22 +1987,41 @@ void DrawArm(void)
 	glPopMatrix();
 }
 
-void Update(int value) 
+void animateWindSpinnerAndCarusel(int value)
+{
+	if (!animation)
+		return;
+
+	rotationAngle += 2.0f; // Adjust rotation speed as needed
+	rotationAngle = wrapAngle(rotationAngle, 360.0);
+
+	glutPostRedisplay();
+	glutTimerFunc(SIXTY_FPS, animateWindSpinnerAndCarusel, 0); // ~60 FPS
+}
+
+void animateSwingKids(int value)
 {
 	if (!animation)
 		return;
 
 	float length = 0.8;
 	double omega = sqrt(9.81 / length);
-	float time_period = 2 * PI * sqrt(length / 9.81);
-	int isForward = 1;
 
-	rotationAngle += 2.0f; // Adjust rotation speed as needed
-	rotationAngle = wrapAngle(rotationAngle, 360.0);
-
-	time += 16 * 0.001f;
+	time += SIXTY_FPS * 0.001f;
 	swingAng = SWING_MAX_ANG * cos(omega * time);
 	jointAngLeg = abs(90 * cos(omega * time));
+
+	glutPostRedisplay();
+	glutTimerFunc(SIXTY_FPS, animateSwingKids, 0); // ~60 FPS
+}
+
+void animateCoOpSwing(int value)
+{
+	if (!animation)
+		return;
+
+	float length = 0.8;
+	float time_period = 2 * PI * sqrt(length / 9.81);
 
 	if (coOpSwingAng == 18 && isUp) {
 		isUp = !isUp;
@@ -2008,7 +2036,7 @@ void Update(int value)
 	}
 
 	glutPostRedisplay();
-	glutTimerFunc(ANIMATION_DELAY, Update, 0);
+	glutTimerFunc(SIXTY_FPS, animateCoOpSwing, 0); // ~60 FPS
 }
 
 void DrawSquare(float xLen, float yLen, float zLen)
