@@ -40,6 +40,14 @@ typedef struct {
 } vec3;
 
 //function declerations
+GLubyte* readBMP(char* imagepath, int* width, int* height);
+GLuint load_texture(char* name);
+void animateCamera(int value);
+void animateCoOpSwing(int value);
+void animateWindSpinnerAndCarusel(int value);
+void animateSwingKids(int value);
+void animateFlag(int value);
+void animateDroplets(int value);
 void drawingCB(void);
 void reshapeCB(int width, int height);
 void keyboardCB(unsigned char key, int x, int y);
@@ -48,10 +56,7 @@ void menuCB(int value);
 void animateBouncingBall(int value);
 void animateSolarSystem(int value);
 void animateTimeChange(int value);
-GLubyte *readBMP(char *imagepath, int *width, int *height);
-void TerminationErrorFunc(char *ErrorString);
-GLuint load_texture(char *name);
-void VerticalCylinder(float radius, float height);
+float DrawChains(int length);
 void DrawSign(void);
 void DrawWindSpinner(void);
 void DrawSpinner(void);
@@ -61,13 +66,8 @@ void DrawSwings(void);
 void DrawSwing(void);
 void DrawFence(vec3 fromPoint, vec3 toPoint, float poleHeight);
 void DrawFlagPole(void);
-void animateFlag(int value);
 void DrawFountain(void);
 void DrawDropletsOval(void);
-void animateDroplets(int value);
-float DrawChains(int length);
-float lerp(float a, float b, float t);
-float invLerp(float a, float b, float c);
 void DrawSwingKid(int gender);
 void DrawHead(void);
 void DrawArm(void);
@@ -78,17 +78,18 @@ void DrawBody(float radius, float height, int gender);
 void DrawSquare(float xLen, float yLen, float zLen);
 void DrawCoOpSwing(void);
 void DrawCoOpSwingKid(int gender);
+void DrawCaruselKid(int gender);
+void TerminationErrorFunc(char* ErrorString);
+void VerticalCylinder(float radius, float height);
+float lerp(float a, float b, float t);
+float invLerp(float a, float b, float c);
+
 void Paint(float r, float g, float b);
 void PaintSpec(float r, float g, float b);
 void GoldColor(void);
 void PolishedSilverColor(void);
 void RubyColor(void);
 void EmeraldColor(void);
-void DrawCaruselKid(int gender);
-void animateCamera(int value);
-void animateCoOpSwing(int value);
-void animateWindSpinnerAndCarusel(int value);
-void animateSwingKids(int value);
 
 // Globals
 float time = 0;
@@ -132,7 +133,6 @@ float droop = 0.0;
 int droop_index = 0;
 float droplets_offset = -90;
 
-
 // Sign, Flag, Bounce, WindSpinner, Carusel, ChainSwing, CoopSwing, SolarSys, Fountain
 const vec3 positions[9] = { {2.95, 3.25, 19.0},	{12.8, 4.0, 19.54},  {-8.4, 2.75, -3.95}, {6.31, 2.6, -0.10}, {15.34, 4.75, 12.9} , {-0.038, 2.75, -7.86} , {-6.1, 6.0, 10.0}, {13.68, 2.25, -5.65}, {-3.5, 3.25, -4.95} };
 const float angles_x[9] = {-15,		-16.5,	-22.5,	6,		-40.5,	-10.5,	-34.5,	-13.5,	-10.5 };
@@ -140,7 +140,6 @@ const float angles_y[9] = { 0,	348,	15,		270,	75,		0,		108,	34.5,	216 };
 vec3 initialCameraPos;
 int selected_model = 0;
 float camera_phaze = 0, initialAngleX, initialAngleY;
-
 
 int main(int argc, char **argv)
 {
